@@ -5,3 +5,9 @@
 #languagedirection = "ltr"
 #title = "Example Site"
 #weight = 1
+
+[ko]
+languageName = "Korean"
+title = "kjs92980 테스트"
+description = "테스트입니다."
+weight = 1
