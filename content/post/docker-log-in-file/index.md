@@ -2,7 +2,7 @@
 title: "Docker 로그 파일 local에 남기기"
 description: 
 date: 2022-12-07T21:26:26+09:00
-image: /assets/images/docker.png
+image: /img/docker.png
 categories:
     - Docker
 draft: true

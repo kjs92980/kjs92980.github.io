@@ -4,7 +4,7 @@ mainSections = ["post"]
 rssFullContent = true
 
 [footer]
-since = 2020
+since = 2022
 customText = ""
 
 [dateFormat]
@@ -18,7 +18,7 @@ subtitle = "테스트입니다요."
 [sidebar.avatar]
 enabled = true
 local = true
-src = "img/avatar.png"
+src = "img/profile.jpeg"
 
 [article]
 math = false
@@ -75,7 +75,7 @@ enabled = true
 ## Comments
 [comments]
 enabled = true
-provider = "disqus"
+provider = "giscus"
 
 [comments.disqusjs]
 shortname = ""
@@ -126,15 +126,16 @@ serverName = "cactus.chat"
 siteName = ""
 
 [comments.giscus]
-repo = ""
-repoID = ""
-category = ""
-categoryID = ""
-mapping = ""
-lightTheme = ""
-darkTheme = ""
+repo = "kjs92980/comments"
+repoID = "R_kgDOIl7l_g"
+category = "Announcements"
+categoryID = "DIC_kwDOIl7l_s4CTAVg"
+mapping = "pathname"
+lightTheme = "light"
+darkTheme = "dark_dimmed"
 reactionsEnabled = 1
 emitMetadata = 0
+inputPosition = "top"
 
 [comments.gitalk]
 owner = ""
