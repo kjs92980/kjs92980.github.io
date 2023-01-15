@@ -13,7 +13,7 @@ lastUpdated = "Jan 02, 2006 15:04 MST"
 
 [sidebar]
 emoji = "😪"
-subtitle = "테스트입니다요."
+subtitle = "The best way to have a good idea is to have lots of ideas."
 
 [sidebar.avatar]
 enabled = true
@@ -70,7 +70,7 @@ default = "auto"
 enabled = true
 
 [imageProcessing.content]
-enabled = true
+enabled = false
 
 ## Comments
 [comments]

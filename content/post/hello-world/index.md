@@ -5,9 +5,7 @@ slug: hello-world
 date: 2022-01-01 00:00:00+0000
 image: cover.jpg
 categories:
-    - Jisu
 tags:
-    - 😊
 ---
 
 # h1 제목
