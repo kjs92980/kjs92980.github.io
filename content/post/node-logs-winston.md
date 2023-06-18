@@ -2,7 +2,7 @@
 title: "Node.js Express Winston 사용하여 로깅하기"
 description: Node.js Express application에 Winston을 사용하여 로그를 남겨 봅시다.
 slug: node-logs-winston
-date: 2022-12-07T21:26:26+09:00
+date: 2023-06-18T13:26:26+09:00
 image: /img/node.png
 categories:
     - Node
