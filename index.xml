@@ -1,0 +1,735 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>kjs92980</title><link>https://kjs92980.github.io/</link><description>Recent content on kjs92980</description><generator>Hugo -- gohugo.io</generator><language>ko</language><lastBuildDate>Sat, 18 Nov 2023 21:36:30 +0900</lastBuildDate><atom:link href="https://kjs92980.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>Windows에서 Docker 사용 시 MySQL 한글 깨짐 해결: Custom Configuration 적용하기</title><link>https://kjs92980.github.io/p/custom-configuration-to-mysql-in-windows/</link><pubDate>Sat, 18 Nov 2023 21:36:30 +0900</pubDate><guid>https://kjs92980.github.io/p/custom-configuration-to-mysql-in-windows/</guid><description>&lt;img src="https://kjs92980.github.io/img/docker.png" alt="Featured image of post Windows에서 Docker 사용 시 MySQL 한글 깨짐 해결: Custom Configuration 적용하기" />&lt;h2 id="why">Why&lt;/h2>
+&lt;p>Windows에서 Docker를 이용해 MySQL 이미지를 구동하던 중 한글이 깨지는 문제가 발생했습니다.&lt;br>
+볼륨으로 마운트한 *.cnf 파일에 characterset을 설정했지만, Windows에서는 이 파일이 777 권한으로 인식되면서 설정이 제대로 반영되지 않는 문제가 발생했습니다.&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-fallback" data-lang="fallback">&lt;span class="line">&lt;span class="cl">World-writable config file &amp;#39;/etc/my.cnf&amp;#39; is ignored
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>여기서는 파일명을 my.cnf로 정의하겠습니다.&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-fallback" data-lang="fallback">&lt;span class="line">&lt;span class="cl">[client]
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">default-character-set = utf8mb4
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">[mysqld]
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">authentication-policy = mysql_native_password
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>이 문제는 Windows와 Linux의 파일 시스템 차이에서 기인합니다.&lt;br>
+Windows에서 Docker를 사용하여 Linux 컨테이너 내의 볼륨으로 파일을 마운트할 때, 해당 파일의 권한 설정이 항상 일관적이지 않을 수 있습니다.&lt;/p>
+&lt;h2 id="todo">ToDo&lt;/h2>
+&lt;p>이러한 문제를 해결하기 위해, 다음과 같은 접근 방법을 사용했습니다.&lt;/p>
+&lt;ol>
+&lt;li>Dockerfile 작성&lt;/li>
+&lt;/ol>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-Dockerfile" data-lang="Dockerfile">&lt;span class="line">&lt;span class="cl">&lt;span class="k">FROM&lt;/span>&lt;span class="s"> mysql:8.0.30&lt;/span>&lt;span class="err">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="err">&lt;/span>&lt;span class="k">COPY&lt;/span> ./db/conf.d/my.cnf /etc/mysql/conf.d/my.cnf&lt;span class="err">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="err">&lt;/span>&lt;span class="k">RUN&lt;/span> chmod &lt;span class="m">644&lt;/span> /etc/mysql/conf.d/my.cnf&lt;span class="err">
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;ul>
+&lt;li>MySQL의 기본 설정을 변경하기 위해 커스텀 Dockerfile을 만들었습니다. 이 파일을 통해 my.cnf 파일의 권한을 설정합니다.&lt;/li>
+&lt;/ul>
+&lt;ol start="2">
+&lt;li>Docker Compose 파일 수정&lt;/li>
+&lt;/ol>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-yaml" data-lang="yaml">&lt;span class="line">&lt;span class="cl">&lt;span class="nt">version&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;3.8&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="nt">services&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">mysql&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">build&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">.&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">ports&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="s2">&amp;#34;3306:3306&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;ul>
+&lt;li>Custom image를 빌드하고 실행하기 위해 Docker Compose 파일을 수정했습니다.&lt;/li>
+&lt;/ul>
+&lt;ol start="3">
+&lt;li>이미지 빌드 및 컨테이너 실행&lt;/li>
+&lt;/ol>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">docker-compose up -d --build
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;ul>
+&lt;li>새로운 Dockerfile을 이용해 이미지를 빌드하고 컨테이너를 실행합니다.&lt;/li>
+&lt;/ul></description></item><item><title>Gitlab CI/CD 환경 구성</title><link>https://kjs92980.github.io/p/gitlab-ci-cd/</link><pubDate>Sat, 26 Aug 2023 21:21:10 +0900</pubDate><guid>https://kjs92980.github.io/p/gitlab-ci-cd/</guid><description>&lt;img src="https://kjs92980.github.io/img/gitlab.png" alt="Featured image of post Gitlab CI/CD 환경 구성" /></description></item><item><title>마이크로서비스 패턴 7장 마이크로서비스 쿼리 구현</title><link>https://kjs92980.github.io/p/implementing-queries-in-microservice/</link><pubDate>Sun, 09 Jul 2023 15:46:37 +0900</pubDate><guid>https://kjs92980.github.io/p/implementing-queries-in-microservice/</guid><description>&lt;img src="https://kjs92980.github.io/p/implementing-queries-in-microservice/microservice-patterns.png" alt="Featured image of post 마이크로서비스 패턴 7장 마이크로서비스 쿼리 구현" />&lt;p>마이크로서비스 패턴 (크리스 리처드슨 저)의 7장 내용을 다룹니다.
+마이크로서비스 아키텍처에서 쿼리를 작성할 때는 흩어져 있는 데이터를 검색해야하므로 어려울 수 있습니다.
+이 장에서는 마이크로서비스 아키텍처에서 데이터를 쿼리하는 문제를 다음 방법으로 해결해 봅니다.&lt;/p>
+&lt;ul>
+&lt;li>API composition pattern API 조합 패턴
+&lt;ul>
+&lt;li>클라이언트가 각 서비스들을 호출하고 결과를 결합하는 책임을 지는 방식으로 동작합니다.&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>Command query responsibility segregation 커맨드 쿼리 책임 분산 (CQRS)&lt;/li>
+&lt;/ul>
+&lt;h2 id="api-composition-pattern">API Composition Pattern&lt;/h2>
+&lt;p>&lt;img src="https://kjs92980.github.io/p/implementing-queries-in-microservice/api-composition-pattern1.png"
+width="898"
+height="657"
+loading="lazy"
+alt="findOrder()"
+class="gallery-image"
+data-flex-grow="136"
+data-flex-basis="328px"
+>&lt;/p>
+&lt;p>모놀리식의 경우(데이터가 단일 데이터베이스에 저장되는 경우) 여러 개의 테이블을 조인하는 select문으로 쉽게 구현할 수 있습니다.&lt;br>
+하지만 마이크로서비스 기반의 애플리케이션에서는 데이터가 여러 서비스에 흩어져 있습니다. 주문 세부 정보가 필요한 모든 고객은 위 모든 서비스에 요청을 해야합니다.&lt;/p>
+&lt;p>&lt;img src="https://kjs92980.github.io/p/implementing-queries-in-microservice/api-composition-pattern2.png"
+width="895"
+height="541"
+loading="lazy"
+alt="API composition pattern"
+class="gallery-image"
+data-flex-grow="165"
+data-flex-basis="397px"
+>&lt;/p>
+&lt;p>API composition pattern을 사용하면 이를 쉽게 구현할 수 있습니다.&lt;/p>
+&lt;h3 id="overview">Overview&lt;/h3>
+&lt;ul>
+&lt;li>API composer
+&lt;ul>
+&lt;li>클라이언트의 요청을 받아, 여러 Provider Services로부터 필요한 데이터를 가져오는 역할을 합니다.&lt;/li>
+&lt;li>이 데이터는 클라이언트가 필요로 하는 형식으로 조합되고, 이 조합된 데이터는 클라이언트에게 응답으로 반환됩니다.&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>Provider Service
+&lt;ul>
+&lt;li>API Composer로부터 요청을 받아, 해당 서비스가 가지고 있는 데이터나 기능을 반환하는 역할을 합니다.&lt;/li>
+&lt;li>이 서비스들은 독립적으로 운영되며 서로 다른 데이터와 기능을 가질 수 있습니다.&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;p>예제에서는 각 Provider service를 REST API 호출을 통해 결과를 가져오고 API composer에서 이를 조인하여 응답합니다.&lt;br>
+(물론 다른 통신 프로토콜을 사용하는 경우에도 사용할 수 있습니다.)&lt;/p>
+&lt;h3 id="design-issue">Design Issue&lt;/h3>
+&lt;ol>
+&lt;li>어떤 컴포넌트가 API composer가 될 것인가?&lt;/li>
+&lt;/ol>
+&lt;ul>
+&lt;li>프론트엔드 클라이언트&lt;/li>
+&lt;li>API 게이트웨이
+&lt;ul>
+&lt;li>API composition 외에도 모든 마이크로 들어오는 요청을 통합적으로 관리하는 역할을 합니다.&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>독립된 서비스 (stand-alone application)&lt;/li>
+&lt;/ul>
+&lt;ol start="2">
+&lt;li>어떻게 효과적인 aggregation logic을 작성할지&lt;/li>
+&lt;/ol>
+&lt;ul>
+&lt;li>느린 aggregation logic은 전체 시스템의 성능을 저하시키고, 클라이언트의 요청을 늦게 처리하는 결과를 초래할 수 있습니다.&lt;/li>
+&lt;li>이 과정에서 가능한 한 응답 시간을 최소화하기 위해 Provider services에 동시에 호출을 하는 것이 일반적입니다.&lt;/li>
+&lt;li>어떤 Provider service의 경우에는 다른 서비스들로부터의 결과가 필요한 경우가 있을 수 있습니다. 이렇게 병렬로 처리할 부분과 순차적으로 처리할 부분을 조합하는 방식은 복잡성을 증가시킵니다.&lt;/li>
+&lt;li>복잡성을 관리하기 위해 API composer은 reactive programming model을 사용하는 것이 좋습니다.&lt;/li>
+&lt;/ul>
+&lt;h3 id="drawbacks">Drawbacks&lt;/h3>
+&lt;p>이 패턴은 마이크로서비스 아키텍처에서 쿼리 작업을 구현하는 간단하고 직관적인 방법이지만, 다음과 같은 단점이 있습니다.&lt;/p>
+&lt;ol>
+&lt;li>증가된 오버헤드&lt;/li>
+&lt;/ol>
+&lt;ul>
+&lt;li>여러 개의 서비스를 호출하고 여러 데이터베이스에 쿼리를 날려야하므로 이로 인한 추가적인 리소스를 필요하게 됩니다.&lt;/li>
+&lt;/ul>
+&lt;ol start="2">
+&lt;li>Availability 감소의 위험&lt;/li>
+&lt;/ol>
+&lt;ul>
+&lt;li>API composer와 Provider services가 함께 동작해야하므로 전체 시스템의 가용성이 개인별 서비스 가용성보다 낮아질 수 있습니다. 하나의 서비스가 비정상 상태가 되면 그 서비스를 이용하는 API composition도 영향을 받게 되므로 가용성이 감소하는 문제가 발생할 수 있습니다.&lt;/li>
+&lt;/ul>
+&lt;p>가용성 감소 문제에 대해 몇 가지 개선 방법을 제시하고 있습니다.&lt;/p>
+&lt;ul>
+&lt;li>Provider service가 사용 불가능할 때 이전에 캐시된 데이터를 반환하는 방법입니다. 이 방법을 사용하면 가용성을 향상시킬 수 있지만, 반환된 데이터가 최신 상태가 아닐 수 있다는 문제점이 있습니다.&lt;/li>
+&lt;li>API composer가 불완전한 데이터를 반환하는 방법입니다. 일부 서비스가 일시적으로 사용이 불가능하면 해당 데이터를 생략하고 나머지 데이터만 반환하는 것입니다.&lt;/li>
+&lt;/ul>
+&lt;ol start="3">
+&lt;li>Transactional Data Consistency의 결여&lt;/li>
+&lt;/ol>
+&lt;ul>
+&lt;li>모놀리식 애플리케이션엥서는 쿼리 연산을 하나의 데이터베이스 트랜잭션으로 실행하는 경우가 많습니다. 이는 일반적으로 애플리케이션에서 데이터의 일관된 뷰를 보장합니다.&lt;/li>
+&lt;li>API composition pattern에서는 여러 데이터베이스에 대해 여러 쿼리를 실행합니다. 여기서 일관성이 없는 데이터를 반환하는 문제가 발생할 수 있습니다.&lt;/li>
+&lt;/ul>
+&lt;p>이 외에도 대량의 데이터셋에 대해 in-memory join을 수행해야하는 경우에는 API composition이 적합하지 않습니다. 메모리에 큰 양의 데이터를 저장하고 데이터를 처리하는데 상당한 리소스를 사용하기 때문에 성능 문제가 발생하거나 시스템이 전체적으로 느려질 수 있습니다.&lt;/p>
+&lt;p>API composition pattern의 한계점을 극복하기 위해 CQRS 패턴을 사용할 수 있습니다.&lt;/p>
+&lt;h2 id="cqrs-패턴">CQRS 패턴&lt;/h2>
+&lt;p>CQRS는 커맨드와 쿼리의 책임을 분리하는 설계 패턴입니다.&lt;/p>
+&lt;ul>
+&lt;li>Command: 상태 변경을 요청하는 작업입니다. 새 데이터를 추가하거나 기존 데이터를 업데이트하는 것이 이에 해당합니다.&lt;/li>
+&lt;li>Query: 정보를 요청하는 작업입니다. 일반적으로 상태를 변경시키지 않고, 필요한 데이터를 조회하는 것에 해당합니다.&lt;/li>
+&lt;/ul>
+&lt;h3 id="overview-1">Overview&lt;/h3>
+&lt;p>CQRS는 마이크로서비스 아키텍처에서 쿼리를 구현하는 다음 문제들의 해결책이 될 수 있습니다.&lt;/p>
+&lt;ol>
+&lt;li>비효율적인 in-memory join&lt;/li>
+&lt;/ol>
+&lt;ul>
+&lt;li>API composition patern의 in-memory join은 많은 양의 데이터를 처리해야 할 때는 비효율적일 수 있습니다.&lt;/li>
+&lt;/ul>
+&lt;ol start="2">
+&lt;li>지원하지 않는 데이터베이스나 형식&lt;/li>
+&lt;/ol>
+&lt;ul>
+&lt;li>서비스가 데이터를 효율적인 쿼리를 지원하지 않는 데이터베이스에 저장하고 있을 수 있습니다. 이는 쿼리를 수행하는데 추가적인 시간이나 리소스를 필요로 할 수 있습니다.&lt;/li>
+&lt;/ul>
+&lt;ol start="3">
+&lt;li>관심사 분리 원칙&lt;/li>
+&lt;/ol>
+&lt;ul>
+&lt;li>복잡한 쿼리가 필요한 경우 데이터를 가진 서비스에서 직접 쿼리하는 것이 적합하지 않을 수 있습니다.&lt;/li>
+&lt;/ul>
+&lt;p>&lt;img src="https://kjs92980.github.io/p/implementing-queries-in-microservice/cqrs1.png"
+width="920"
+height="643"
+loading="lazy"
+alt="non-CQRS vs CQRS"
+class="gallery-image"
+data-flex-grow="143"
+data-flex-basis="343px"
+>&lt;/p>
+&lt;ul>
+&lt;li>non-CQRS
+&lt;ul>
+&lt;li>일반적으로 CRUD 작업이 도메인 모델(데이터베이스에 매핑)을 통해 실행됩니다.&lt;/li>
+&lt;li>하나의 데이터 모델이 커맨드(데이터 변경 작업)과 쿼리(데이터 조회 작업)을 모두 지원합니다.&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>CQRS
+&lt;ul>
+&lt;li>커맨드와 쿼리로 나뉘며, 커맨드 도메인 모델은 CRUD 작업을 처리하고 별도의 데이터베이스에 매핑이 됩니다. 데이터가 변경될 때마다 도메인 이벤트를 발행합니다.&lt;/li>
+&lt;li>쿼리 사이드는 복잡한 쿼리를 처리하는 별도의 모델을 말합니다. 지원하는 쿼리 유형에 가장 적합한 데이터베이스를 사용합니다. 이벤트 핸들러를 가져 커맨드 사이드에서 발행한 이벤트를 구독하고 이에 따라 데이터베이스를 업데이트합니다.&lt;/li>
+&lt;li>쿼리 처리 성능을 향상시키는 데 검색 엔진과 같은 도구를 사용할 수 있습니다.&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;h3 id="benefits">Benefits&lt;/h3>
+&lt;ol>
+&lt;li>마이크로서비스 아키텍처에서의 효율적인 쿼리 구현이 가능합니다.&lt;/li>
+&lt;/ol>
+&lt;ul>
+&lt;li>기존의 API 조합 패턴에서는 메모리 내에서 데이터를 조인하는데 비효율적일 수 있습니다.&lt;/li>
+&lt;li>CQRS는 서비스 간의 데이터를 미리 조인한 형태로 보관하고, 쿼리할 때 이를 활용하여 효율적인 쿼리를 가능하게 합니다.&lt;/li>
+&lt;/ul>
+&lt;ol start="2">
+&lt;li>다양한 쿼리의 구현이 가능합니다.&lt;/li>
+&lt;/ol>
+&lt;ul>
+&lt;li>특정 쿼리를 효율적으로 구현하는 하나 이상의 뷰를 정의합니다.&lt;/li>
+&lt;/ul>
+&lt;ol start="3">
+&lt;li>이벤트 소싱 기반 애플리케이션에서의 쿼리가 가능합니다.&lt;/li>
+&lt;/ol>
+&lt;ul>
+&lt;li>이벤트 소싱(Event Sourcing)은 상태 변경을 이벤트라는 일련의 변경 로그로 저장하는 방법론입니다. 이벤트 소싱은 시스템의 상태를 변경하는 모든 행동을 이벤트로 캡처하며, 이벤트는 순서대로 저장되고, 이러한 이벤트의 시퀀스로 시스템의 상태를 재현하거나 재생성할 수 있습니다. 이 방법은 비즈니스 요구 사항이 변해도 시스템이 그 변화에 대응할 수 있게 만들어주며, 언제 어떤 이벤트가 발생했는지에 대한 완벽한 기록을 제공합니다.&lt;/li>
+&lt;li>그러나 이벤트 소싱의 한계 중 하나는 이벤트 저장소(Event Store)가 기본 키에 기반한 쿼리만 지원한다는 것입니다. 즉, 특정 키를 사용해 직접적인 조회를 할 수 있지만, 그 외의 복잡한 쿼리나 조건을 통한 검색은 어렵습니다.&lt;/li>
+&lt;li>CQRS를 이벤트 소싱과 함께 사용하면, 애플리케이션은 &amp;lsquo;Aggregates&amp;rsquo;의 &amp;lsquo;View&amp;rsquo;를 정의하고, 그 뷰는 이벤트 소싱 기반의 집합체가 발행하는 이벤트 스트림을 구독하며 업데이트됩니다. Aggregates는 도메인 모델의 일부를 나타내며, 그 상태는 이벤트를 통해 변경됩니다. 이렇게 만들어진 뷰는 여러 가지 복잡한 쿼리를 처리할 수 있게 해주므로, 이벤트 소싱을 기반으로 한 애플리케이션에서 복잡한 쿼리를 가능하게 합니다.&lt;/li>
+&lt;/ul>
+&lt;ol start="4">
+&lt;li>관심사의 분리 개선&lt;/li>
+&lt;/ol>
+&lt;ul>
+&lt;li>CQRS가 하나의 서비스 내에서 &amp;lsquo;커맨드&amp;rsquo;과 &amp;lsquo;쿼리&amp;rsquo;를 처리하는 부분을 분리함으로써 서비스의 복잡성을 줄이고 유지보수를 용이하게 한다는 것을 의미합니다. 예를 들어, 커맨드는 비즈니스 로직을 처리하고 쿼리는 데이터 조회를 처리하게 됩니다. 이렇게 분리함으로써 각 부분은 자신의 역할에만 집중할 수 있게 됩니다.&lt;/li>
+&lt;/ul>
+&lt;ol start="5">
+&lt;li>데이터를 소유한 서비스와 쿼리를 구현하는 서비스를 분리가 가능합니다.&lt;/li>
+&lt;/ol>
+&lt;ul>
+&lt;li>CQRS를 이용하면 &amp;lsquo;데이터를 소유하는 서비스&amp;rsquo;와 &amp;lsquo;쿼리를 실행하는 서비스&amp;rsquo;가 서로 다른 서비스로 분리될 수 있다는 것을 의미합니다. 예를 들어, &amp;lsquo;주문 데이터&amp;rsquo;를 소유한 주문 서비스와 주문 조회를 처리하는 주문 조회 서비스가 별도로 존재할 수 있습니다. 이렇게 분리하면 특정 서비스의 부하가 다른 서비스에 영향을 미치는 것을 방지하고, 각 서비스를 독립적으로 확장할 수 있게 됩니다.&lt;/li>
+&lt;/ul>
+&lt;h3 id="drawbacks-1">Drawbacks&lt;/h3>
+&lt;ol>
+&lt;li>아키텍처의 복잡성이 증가합니다.&lt;/li>
+&lt;/ol>
+&lt;ul>
+&lt;li>데이터를 갱신하고 쿼리하는 쿼리-사이드 서비스를 추가로 구현해야 하며, 이로 인해 추가적인 운영 복잡성이 발생할 수 있습니다.&lt;/li>
+&lt;li>여러 타입의 데이터베이스를 사용하게 되어 더 많은 복잡성을 더하게 됩니다.&lt;/li>
+&lt;/ul>
+&lt;ol start="2">
+&lt;li>커맨드, 쿼리 간의 지연이 있을 수 있습니다.&lt;/li>
+&lt;/ol>
+&lt;ul>
+&lt;li>커맨드 사이드에서 이벤트를 발행하고 쿼리 사이드에서 이를 처리하여 뷰를 업데이트하는 사이에는 약간의 지연이 있을 수 있습니다.&lt;/li>
+&lt;li>불일치를 사용자에게 노출하지 않도록 지연되는 부분을 고려해서 구현해야 합니다.&lt;/li>
+&lt;/ul>
+&lt;h3 id="designing-views">Designing Views&lt;/h3>
+&lt;p>&lt;img src="https://kjs92980.github.io/p/implementing-queries-in-microservice/cqrs2.png"
+width="576"
+height="456"
+loading="lazy"
+alt="CQRS view module"
+class="gallery-image"
+data-flex-grow="126"
+data-flex-basis="303px"
+>&lt;/p>
+&lt;h5 id="view-data-store-선택">View Data Store 선택&lt;/h5>
+&lt;ul>
+&lt;li>SQL
+&lt;ul>
+&lt;li>트랜잭션과 쿼리 기능이 잘 구성되어 있으나 데이터 모델이 비교적 유연하지 않아 요구 사항을 만족시키는 데 어려움이 있을 수 있습니다.&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>NoSQL
+&lt;ul>
+&lt;li>트랜잭션 및 일반 쿼리 기능이 제한적이지만 CQRS 뷰는 간단한 트랜잭션과 고정된 쿼리만 실행하기 때문에 제한 사항에 크게 영향을 받지 않습니다.&lt;/li>
+&lt;li>NoSQL는 유연한 데이터 모델과 더 나은 성능 및 확장성을 강점으로 CQRS 뷰에 적용할 수 있습니다.&lt;/li>
+&lt;li>책에 나오는 AWS DynamoDB는 NoSQL 서비스입니다.&lt;/li>
+&lt;li>두 개 이상의 서비스가 발행사는 이벤트를 구독하고 그에 따라 뷰를 업데이트해야하는 경우도 있습니다. 이 경우 외래 키를 기반으로 데이터를 업데이트해야 할 수 있습니다. NoSQL의 경우 기본 키를 사용한 연산에 최적화되어 있기 때문에 외래 키 기반의 업데이트를 위한 추가 구현이 필요할 수 있습니다.&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;h5 id="data-access-모듈">Data access 모듈&lt;/h5>
+&lt;ul>
+&lt;li>동시 업데이트
+&lt;ul>
+&lt;li>여러 aggregate types에서 발행하는 이벤트를 구독하는 경우, 여러 이벤트 핸들러가 동시에 동일한 레코드를 업데이트할 수 있습니다.&lt;/li>
+&lt;li>하나의 업데이트가 다른 업데이트를 덮어쓰는 것을 허용할 수는 없으므로 pessimistic locking 또는 optimistic locking을 사용하여 이를 해결할 수 있습니다.
+&lt;ul>
+&lt;li>pessimistic locking: 데이터를 읽은 후 변경하기 전에 레코드에 락을 걸어 다른 트랜잭션들이 해당 레코드를 변경할 수 없도록 합니다. 이를 통해 동시에 레코드를 변경하려는 다른 트랜잭션의 개입을 막아 데이터 충돌을 방지합니다.&lt;/li>
+&lt;li>optimistic locking: 레코드를 읽을 때 락을 걸지 않습니다. 대신, 레코드를 업데이트하는 시점에 그 레코드가 마지막으로 읽은 이후에 변경되지 않았는지 확인합니다. 이 값이 변경된 경우 충돌이 발생했음을 알리고 해당 트랜잭션을 롤백합니다.&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>멱등성(idempotency)
+&lt;ul>
+&lt;li>같은 이벤트를 여러 번 받을 수 있는데, 이 경우 일반적으로 쿼리 측 이벤트 핸들러가 멱등하다면 문제가 되지 않습니다.&lt;/li>
+&lt;li>이벤트 핸들러가 멱등하지 않는 경우 신뢰성을 유지하기 위해 이벤트 ID를 기록하고 데이터 저장소를 atmoically 업데이트해야 합니다.&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>최종적 일관성(eventual consistency)
+&lt;ul>
+&lt;li>불가피한 지연 문제(replication lag)로 클라이언트가 업데이트한 내용을 즉시 쿼리로 볼 수 없는 경우가 있습니다.&lt;/li>
+&lt;li>이를 위해 커맨드와 쿼리 모듈은 클라이언트가 불일치를 감지할 수 있도록 지원해야 합니다.&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;h5 id="cqrs-뷰-추가-및-업데이트">CQRS 뷰 추가 및 업데이트&lt;/h5>
+&lt;p>새로운 쿼리를 지원하기 위해 새로운 뷰를 추가하거나 스키마가 변경되었거나 뷰를 업데이트하는 코드에 버그를 수정해야해서 뷰를 재생성해야 할 때가 있습니다. 이때 다음과 같은 내용을 고려해야 합니다.&lt;/p>
+&lt;ul>
+&lt;li>아카이빙된 이벤트를 이용하여 뷰를 구축합니다.
+&lt;ul>
+&lt;li>메시지 브로커는 메시지를 무기한으로 저장할 수 없습니다. 그 이전의 이벤트도 읽기 위해 메시지 브로커와 별도로 아카이빙된 이벤트를 읽어서 뷰를 구축합니다.&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>시간이 지남에 따라 점점 모든 이벤트를 처리하는데 비용이 많이 들게 됩니다.
+&lt;ul>
+&lt;li>two-step incremental algorithm으로 해결할 수 있습니다.
+&lt;ol>
+&lt;li>Snapshot Creation: 이 단계에서는 각 aggregate instance의 스냅샷을 주기적으로 계산합니다. 이는 이전 스냅샷과 그 이후에 발생한 이벤트를 기반으로 합니다. 이렇게 하면 각 aggregate instance의 상태를 빠르게 알 수 있게 됩니다. 이렇게 생성된 스냅샷은 일종의 체크포인트 역할을 합니다.&lt;/li>
+&lt;li>View Building: 이 단계에서는 스냅샷과 그 이후에 발생한 이벤트를 사용하여 뷰를 생성합니다. 이로써 뷰는 최신 상태로 업데이트됩니다.&lt;/li>
+&lt;/ol>
+&lt;/li>
+&lt;li>이 알고리즘의 장점은 모든 이벤트를 처음부터 다시 처리할 필요 없이 뷰를 업데이트할 수 있다는 것입니다. 대신, 가장 최근의 스냅샷에서 시작하여 이후에 발생한 이벤트만 처리하면 됩니다. 이는 뷰를 업데이트하는 데 필요한 시간과 리소스를 크게 줄여줍니다.&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;h2 id="참조">참조&lt;/h2>
+&lt;ul>
+&lt;li>&lt;a class="link" href="https://www.yes24.com/Product/Goods/86542732" target="_blank" rel="noopener"
+>마이크로서비스 패턴 - 크리스 리처드슨 저&lt;/a>&lt;/li>
+&lt;li>&lt;a class="link" href="https://microservices.io/patterns/data/api-composition.html" target="_blank" rel="noopener"
+>Microservice Architecture &amp;gt; Pattern: API Composition&lt;/a>&lt;/li>
+&lt;li>&lt;a class="link" href="https://microservices.io/patterns/data/cqrs.html" target="_blank" rel="noopener"
+>Microservice Architecture &amp;gt; Command Query Responsibility Segregation (CQRS)&lt;/a>&lt;/li>
+&lt;/ul></description></item><item><title>Node.js Express Winston 사용하여 로깅하기</title><link>https://kjs92980.github.io/p/node-logs-winston/</link><pubDate>Sun, 18 Jun 2023 13:26:26 +0900</pubDate><guid>https://kjs92980.github.io/p/node-logs-winston/</guid><description>&lt;img src="https://kjs92980.github.io/img/node.png" alt="Featured image of post Node.js Express Winston 사용하여 로깅하기" />&lt;h2 id="why">Why?&lt;/h2>
+&lt;ul>
+&lt;li>Node.js에서 &lt;a class="link" href="https://nodejs.org/api/console.html" target="_blank" rel="noopener"
+>console&lt;/a>에 내장된 전역 객체로 표준 출력 또는 표준 에러 출력으로 로그를 기록하는데 사용합니다.&lt;/li>
+&lt;li>&lt;code>console.log()&lt;/code> 또는 &lt;code>console.error()&lt;/code>로 출력한 로그는 Node.js application이 실행되는 콘솔에 바로 출력되므로, application이 종료되면 로그는 사라집니다.&lt;/li>
+&lt;li>리다이렉션(&amp;rsquo;&amp;gt;&amp;rsquo;)을 사용하여 파일로 리다이렉트를 할 수는 있지만 로그 레벨이나 형식을 설정하거나, 로그 파일을 자동으로 rotate하는 등의 기능은 제공하지 않습니다.&lt;/li>
+&lt;li>우리는 &lt;a class="link" href="https://github.com/winstonjs/winston" target="_blank" rel="noopener"
+>Winston&lt;/a>과 같은 로깅 모듈을 사용하여 효과적으로 로그를 파일로 관리할 수 있습니다.
+&lt;ul>
+&lt;li>로그 레벨, 형식, transport, rotate&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;p>이 글에서는 &lt;a class="link" href="https://github.com/winstonjs/winston" target="_blank" rel="noopener"
+>Winston&lt;/a>으로 사용해서 Node.js application의 로그를 특정 위치에 저장해보고,&lt;br>
+Docker container로 실행시킬 때 Volume을 사용하여 로컬 호스트에도 로그 파일이 저장되도록 설정해보겠습니다.&lt;/p>
+&lt;h2 id="install">Install&lt;/h2>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-sh" data-lang="sh">&lt;span class="line">&lt;span class="cl">npm install winston
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;h2 id="use">Use&lt;/h2>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-js" data-lang="js">&lt;span class="line">&lt;span class="cl">&lt;span class="kr">const&lt;/span> &lt;span class="nx">winston&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nx">require&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s1">&amp;#39;winston&amp;#39;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kr">const&lt;/span> &lt;span class="nx">logger&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nx">winston&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">createLogger&lt;/span>&lt;span class="p">({&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">transports&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="p">[&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">new&lt;/span> &lt;span class="nx">winston&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">transports&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">Console&lt;/span>&lt;span class="p">()&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">]&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">});&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nx">logger&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">info&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s1">&amp;#39;Hello world&amp;#39;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// {&amp;#34;level&amp;#34;:&amp;#34;info&amp;#34;,&amp;#34;message&amp;#34;:&amp;#34;Hello world&amp;#34;}
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;h3 id="format">format&lt;/h3>
+&lt;p>format은 로그 메시지의 출력 포맷을 결정합니다.
+&lt;code>winston.format&lt;/code> 모듈은 로그 메시지에 대한 사전 설정된 포맷을 사용할 수도 있고 사용자가 정의한 포맷을 사용할 수도 있습니다.
+&lt;code>winston.format.combine&lt;/code>으로 여러 포맷을 하나의 포맷으로 결합할 수도 있습니다.&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-js" data-lang="js">&lt;span class="line">&lt;span class="cl">&lt;span class="kr">const&lt;/span> &lt;span class="nx">logger&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nx">winston&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">createLogger&lt;/span>&lt;span class="p">({&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">format&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="nx">winston&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">format&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">combine&lt;/span>&lt;span class="p">(&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">winston&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">format&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">label&lt;/span>&lt;span class="p">({&lt;/span>&lt;span class="nx">label&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s1">&amp;#39;service&amp;#39;&lt;/span>&lt;span class="p">}),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">winston&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">format&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">timestamp&lt;/span>&lt;span class="p">({&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">format&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s1">&amp;#39;YYYY-MM-DDTHH:mm:ss.SSSZ&amp;#39;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">winston&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">format&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">printf&lt;/span>&lt;span class="p">(({&lt;/span>&lt;span class="nx">level&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">message&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">label&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">timestamp&lt;/span>&lt;span class="p">})&lt;/span> &lt;span class="p">=&amp;gt;&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="sb">`&lt;/span>&lt;span class="si">${&lt;/span>&lt;span class="nx">timestamp&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="sb"> [&lt;/span>&lt;span class="si">${&lt;/span>&lt;span class="nx">label&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="sb">] &lt;/span>&lt;span class="si">${&lt;/span>&lt;span class="nx">level&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="sb">: &lt;/span>&lt;span class="si">${&lt;/span>&lt;span class="nx">message&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="sb">`&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">})&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">transports&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="p">[&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">new&lt;/span> &lt;span class="nx">winston&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">transports&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">Console&lt;/span>&lt;span class="p">()&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">],&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">});&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nx">logger&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">info&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s1">&amp;#39;Hello world&amp;#39;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// 2023-01-01T12:00:00.000+09:00 [service] info: Hello world
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;ul>
+&lt;li>&lt;code>label&lt;/code>: 각 메시지에 사용자가 정의한 필드를 추가합니다.&lt;/li>
+&lt;li>&lt;code>timestamp&lt;/code>: 메시지를 받은 timestamp를 추가합니다. timestamp의 format도 정의할 수 있습니다.&lt;/li>
+&lt;li>&lt;code>printf&lt;/code>: 메시지의 최종 출력을 정의합니다.&lt;/li>
+&lt;/ul>
+&lt;h3 id="transports">transports&lt;/h3>
+&lt;p>로그 메시지가 출력되는 위치를 결정합니다. 로그 파일, 콘솔, 외부 서버 등이 될 수 있고, 여러 개의 transport를 동시에 사용하여 동시에 다른 위치에 메시지를 출력할 수 있습니다.&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-js" data-lang="js">&lt;span class="line">&lt;span class="cl">&lt;span class="kr">const&lt;/span> &lt;span class="nx">logger&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nx">winston&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">createLogger&lt;/span>&lt;span class="p">({&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">format&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="nx">winston&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">format&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">combine&lt;/span>&lt;span class="p">(&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">winston&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">format&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">label&lt;/span>&lt;span class="p">({&lt;/span>&lt;span class="nx">label&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s1">&amp;#39;service&amp;#39;&lt;/span>&lt;span class="p">}),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">winston&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">format&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">timestamp&lt;/span>&lt;span class="p">({&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">format&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s1">&amp;#39;YYYY-MM-DDTHH:mm:ss.SSSZ&amp;#39;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">winston&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">format&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">printf&lt;/span>&lt;span class="p">(({&lt;/span>&lt;span class="nx">level&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">message&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">label&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">timestamp&lt;/span>&lt;span class="p">})&lt;/span> &lt;span class="p">=&amp;gt;&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="sb">`&lt;/span>&lt;span class="si">${&lt;/span>&lt;span class="nx">timestamp&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="sb"> [&lt;/span>&lt;span class="si">${&lt;/span>&lt;span class="nx">label&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="sb">] &lt;/span>&lt;span class="si">${&lt;/span>&lt;span class="nx">level&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="sb">: &lt;/span>&lt;span class="si">${&lt;/span>&lt;span class="nx">message&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="sb">`&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">})&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">transports&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="p">[&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">new&lt;/span> &lt;span class="nx">winston&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">transports&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">File&lt;/span>&lt;span class="p">({&lt;/span> &lt;span class="nx">filename&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s1">&amp;#39;service.log&amp;#39;&lt;/span>&lt;span class="p">}),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">],&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">});&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nx">logger&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">info&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s1">&amp;#39;Hello world&amp;#39;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// 2023-01-01T12:00:00.000+09:00 [service] info: Hello world
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>위 예제에서는 &amp;lsquo;service.log&amp;rsquo; 파일로 출력하고 있습니다.
+이렇게 하면 해당 한 파일에 로그가 계속 쌓이게 되는데 로그 파일의 rotation은 파일이 무제한으로 커지는 것을 방지할 수 있습니다.
+우리는 &lt;a class="link" href="https://github.com/winstonjs/winston-daily-rotate-file" target="_blank" rel="noopener"
+>winston-daily-rotate-file&lt;/a>을 사용해서 파일 rotation을 설정해보겠습니다.&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-js" data-lang="js">&lt;span class="line">&lt;span class="cl">&lt;span class="kr">import&lt;/span> &lt;span class="nx">DailyRotateFile&lt;/span> &lt;span class="nx">from&lt;/span> &lt;span class="s1">&amp;#39;winston-daily-rotate-file&amp;#39;&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kr">const&lt;/span> &lt;span class="nx">logger&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nx">winston&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">createLogger&lt;/span>&lt;span class="p">({&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">format&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="nx">winston&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">format&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">combine&lt;/span>&lt;span class="p">(&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">winston&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">format&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">label&lt;/span>&lt;span class="p">({&lt;/span>&lt;span class="nx">label&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s1">&amp;#39;service&amp;#39;&lt;/span>&lt;span class="p">}),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">winston&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">format&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">timestamp&lt;/span>&lt;span class="p">({&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">format&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s1">&amp;#39;YYYY-MM-DDTHH:mm:ss.SSSZ&amp;#39;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">winston&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">format&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">printf&lt;/span>&lt;span class="p">(({&lt;/span>&lt;span class="nx">level&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">message&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">label&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">timestamp&lt;/span>&lt;span class="p">})&lt;/span> &lt;span class="p">=&amp;gt;&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="sb">`&lt;/span>&lt;span class="si">${&lt;/span>&lt;span class="nx">timestamp&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="sb"> [&lt;/span>&lt;span class="si">${&lt;/span>&lt;span class="nx">label&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="sb">] &lt;/span>&lt;span class="si">${&lt;/span>&lt;span class="nx">level&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="sb">: &lt;/span>&lt;span class="si">${&lt;/span>&lt;span class="nx">message&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="sb">`&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">})&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">transports&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="p">[&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">new&lt;/span> &lt;span class="nx">DailyRotateFile&lt;/span>&lt;span class="p">({&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">filename&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s1">&amp;#39;service.log&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">datePattern&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s1">&amp;#39;YYYY-MM-DD_HH&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">maxSize&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s1">&amp;#39;20m&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">maxFiles&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s1">&amp;#39;7d&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">})&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">],&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">});&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// 파일명 service.log.2023-01-01_12
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;ul>
+&lt;li>&lt;code>filename&lt;/code>: 로깅에 사용할 파일 이름입니다.&lt;/li>
+&lt;li>&lt;code>dataPattern&lt;/code>: rotation에 사용할 moment.js 날짜 포맷을 나타냅니다.&lt;/li>
+&lt;li>&lt;code>maxSize&lt;/code>: rotation할 파일의 최대 크기입니다. 파일의 크기가 maxSize에 도달하면 새로운 파일이 생성됩니다.&lt;/li>
+&lt;li>&lt;code>maxFiles&lt;/code>: 보관할 최대 파일 개수, 일수를 말합니다. 예제의 경우 7일이 경과하면 자동으로 파일이 삭제됩니다.&lt;/li>
+&lt;/ul>
+&lt;p>이 외에도 &lt;code>zippedArchive&lt;/code> 옵션으로 로그 파일을 압축할 수도, &lt;code>level&lt;/code>로 로깅 레벨을 설정할 수도 있습니다.
+서버 application에서는 access 로그(incoming request에 대한 로그)도 파일로 기록하면 좋겠죠.&lt;br>
+&lt;a class="link" href="https://github.com/expressjs/morgan" target="_blank" rel="noopener"
+>Morgan&lt;/a>을 winston logger과 함께 사용하면 winston의 기능을 사용해서 로그를 잘 관리할 수 있습니다.&lt;/p>
+&lt;h2 id="morgan">Morgan&lt;/h2>
+&lt;p>&lt;a class="link" href="https://github.com/expressjs/morgan" target="_blank" rel="noopener"
+>Morgan&lt;/a>은 HTTP request 로그 미들웨어로 요청, 응답에 대한 정보를 로그로 남길 수 있습니다.
+다양한 출력 포맷과 로그 레벨, rotation, 압축을 사용하기 위해 winston 모듈과 함께 사용해보도록 합시다.&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-js" data-lang="js">&lt;span class="line">&lt;span class="cl">&lt;span class="kr">const&lt;/span> &lt;span class="nx">accessLogger&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nx">winston&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">createLogger&lt;/span>&lt;span class="p">({&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">format&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="nx">winston&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">format&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">combine&lt;/span>&lt;span class="p">(&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">winston&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">format&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">timestamp&lt;/span>&lt;span class="p">({&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">format&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s1">&amp;#39;YYYY-MM-DDTHH:mm:ss.SSSZ&amp;#39;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">winston&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">format&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">printf&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">info&lt;/span> &lt;span class="p">=&amp;gt;&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kd">let&lt;/span> &lt;span class="nx">message&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nx">info&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">message&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="k">typeof&lt;/span> &lt;span class="nx">message&lt;/span> &lt;span class="o">===&lt;/span> &lt;span class="s1">&amp;#39;object&amp;#39;&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nb">Object&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">assign&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">info&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">message&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">delete&lt;/span> &lt;span class="nx">info&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">message&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="nx">JSON&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">stringify&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">info&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">transports&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="p">[&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">new&lt;/span> &lt;span class="nx">DailyRotateFile&lt;/span>&lt;span class="p">({&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">filename&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s1">&amp;#39;access.log&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">datePattern&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s1">&amp;#39;YYYY-MM-DD_HH&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">maxSize&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s1">&amp;#39;20m&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">maxFiles&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s1">&amp;#39;7d&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">})&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">],&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">});&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nx">morgan&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">format&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s1">&amp;#39;json&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="nx">tokens&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">req&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">res&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">=&amp;gt;&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="nx">JSON&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">stringify&lt;/span>&lt;span class="p">({&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s1">&amp;#39;ip&amp;#39;&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="nx">tokens&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="s1">&amp;#39;remote-addr&amp;#39;&lt;/span>&lt;span class="p">](&lt;/span>&lt;span class="nx">req&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">res&lt;/span>&lt;span class="p">),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s1">&amp;#39;method&amp;#39;&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="nx">tokens&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">method&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">req&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">res&lt;/span>&lt;span class="p">),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s1">&amp;#39;url&amp;#39;&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="nx">tokens&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">url&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">req&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">res&lt;/span>&lt;span class="p">),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s1">&amp;#39;status&amp;#39;&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="nx">tokens&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">status&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">req&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">res&lt;/span>&lt;span class="p">),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s1">&amp;#39;contentLength&amp;#39;&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="nx">tokens&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">res&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">req&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">res&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="s1">&amp;#39;content-length&amp;#39;&lt;/span>&lt;span class="p">),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s1">&amp;#39;duration&amp;#39;&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="nx">tokens&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="s1">&amp;#39;response-time&amp;#39;&lt;/span>&lt;span class="p">](&lt;/span>&lt;span class="nx">req&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">res&lt;/span>&lt;span class="p">),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s1">&amp;#39;version&amp;#39;&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s1">&amp;#39;HTTP/&amp;#39;&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="nx">tokens&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="s1">&amp;#39;http-version&amp;#39;&lt;/span>&lt;span class="p">](&lt;/span>&lt;span class="nx">req&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">res&lt;/span>&lt;span class="p">),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s1">&amp;#39;host&amp;#39;&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="nx">tokens&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">req&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">req&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">res&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="s1">&amp;#39;hostname&amp;#39;&lt;/span>&lt;span class="p">),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">});&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">});&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kr">const&lt;/span> &lt;span class="nx">accessStream&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">write&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="nx">message&lt;/span> &lt;span class="p">=&amp;gt;&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kr">const&lt;/span> &lt;span class="p">{&lt;/span>&lt;span class="nx">ip&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">method&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">url&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">status&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">contentLength&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">duration&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">proto&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">host&lt;/span>&lt;span class="p">}&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nx">JSON&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">parse&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">message&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">accessLogger&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">info&lt;/span>&lt;span class="p">({&lt;/span>&lt;span class="nx">ip&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">method&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">url&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">status&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">contentLength&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">duration&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">proto&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">host&lt;/span>&lt;span class="p">});&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">};&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kr">const&lt;/span> &lt;span class="nx">app&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nx">express&lt;/span>&lt;span class="p">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nx">app&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">use&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">morgan&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s1">&amp;#39;json&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="p">{&lt;/span>&lt;span class="nx">stream&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="nx">accessStream&lt;/span>&lt;span class="p">}));&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// {&amp;#34;level&amp;#34;:&amp;#34;info&amp;#34;,&amp;#34;timestamp&amp;#34;:&amp;#34;2023-01-01T00:00:00.000+09:00&amp;#34;,&amp;#34;ip&amp;#34;:&amp;#34;127.0.0.1&amp;#34;,&amp;#34;method&amp;#34;:&amp;#34;GET&amp;#34;,&amp;#34;url&amp;#34;:&amp;#34;/health&amp;#34;,&amp;#34;status&amp;#34;:&amp;#34;200&amp;#34;,&amp;#34;duration&amp;#34;:&amp;#34;4.900&amp;#34;,&amp;#34;version&amp;#34;:&amp;#34;HTTP/1.1&amp;#34;}
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>write()을 포함한 accessStream을 구현하여 morgan에 설정을 해줍니다.
+accessLogger.info()로 추가하게 되면 message의 필드들로 들어가게 되는데 message 밖으로 필드를 꺼내기 위해 &lt;code>winston.format.printf&lt;/code>를 정의했습니다.
+예제에서는 &amp;lsquo;json&amp;rsquo;이라는 포맷을 사용자가 정의했지만 이미 정의된 &amp;rsquo;tiny&amp;rsquo;, &amp;lsquo;short&amp;rsquo;, &amp;lsquo;common&amp;rsquo; 등으로 설정하여 보다 간단하게 설정할 수도 있습니다.&lt;/p>
+&lt;h2 id="docker-volumes">Docker Volumes&lt;/h2>
+&lt;p>express application을 docker container로 실행하면 이 container가 down했을 때 로그 파일도 제거됩니다.
+매번 새로운 버전으로 업데이트할 때마다 로그 파일이 제거되면 서비스 운영이 어려움이 있을 것입니다.
+이를 방지하기 위해 중요한 로그 데이터는 외부 볼륨에 저장하거나, 별도의 로그 관리 시스템에서 수집할 수 있습니다.&lt;br>
+우리는 docker volumes을 통해 호스트 시스템 디렉토리에 마운트해서 container가 down되더라도 로그 파일이 유지될 수 있도록 설정해보겠습니다.&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-yml" data-lang="yml">&lt;span class="line">&lt;span class="cl">&lt;span class="nt">version&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;3.8&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="nt">services&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">backend&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">container_name&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">backend&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">image&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">backend:${TAG}&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">ports&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="s2">&amp;#34;8080:8080&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">volumes&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="l">/local/path/log:/container/path/log&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>호스트(로컬) 경로인 &amp;lsquo;/local/path/log&amp;rsquo;를 컨테이너 내부 경로인 &amp;lsquo;/container/path/log&amp;rsquo;와 연결하고, 호스트의 로그 파일을 컨테이너의 로그 경로로 마운트합니다.&lt;br>
+이를 통해 로컬 파일 시스템과 컨테이너 간에 데이터를 공유하고, 컨테이너 내부에서 해당 경로에 액세스할 수 있습니다.&lt;br>
+이제는 container가 down되더라도 &amp;lsquo;/local/path/log&amp;rsquo;에 로그 파일이 남아 조회해볼 수 있습니다.&lt;/p>
+&lt;h2 id="conclusion">Conclusion&lt;/h2>
+&lt;ul>
+&lt;li>Node.js에서 winston이라는 사용자 정의 포맷, rotation, 압축 등을 지원하는 로깅 모듈을 통해 다양한 경로로 출력할 수 있습니다.&lt;/li>
+&lt;li>HTTP request, response를 기록하는 morgan도 winston과 함께 사용하면 위 기능들로 로그 파일을 관리할 수 있습니다.&lt;/li>
+&lt;li>docker container로 application을 운영하는 경우 volumes로 로그 파일을 호스트에 마운트하면 container down 시에도 호스트에 로그 파일을 유지할 수 있습니다.&lt;/li>
+&lt;/ul>
+&lt;h2 id="참조">참조&lt;/h2>
+&lt;ul>
+&lt;li>&lt;a class="link" href="https://github.com/winstonjs/winston" target="_blank" rel="noopener"
+>Github: Winston&lt;/a>&lt;/li>
+&lt;li>&lt;a class="link" href="https://github.com/winstonjs/winston-daily-rotate-file" target="_blank" rel="noopener"
+>Github: winston-daily-rotate-file&lt;/a>&lt;/li>
+&lt;li>&lt;a class="link" href="https://github.com/expressjs/morgan" target="_blank" rel="noopener"
+>Github: Morgan&lt;/a>&lt;/li>
+&lt;li>&lt;a class="link" href="https://docs.docker.com/storage/volumes/" target="_blank" rel="noopener"
+>Docker Docs &amp;gt; Volumes&lt;/a>&lt;/li>
+&lt;/ul></description></item><item><title>MongoDB 인덱스</title><link>https://kjs92980.github.io/p/mongodb-indexes/</link><pubDate>Mon, 05 Jun 2023 15:11:17 +0900</pubDate><guid>https://kjs92980.github.io/p/mongodb-indexes/</guid><description>&lt;img src="https://kjs92980.github.io/img/mongodb.png" alt="Featured image of post MongoDB 인덱스" />&lt;h2 id="random-io-vs-sequential-io">Random I/O vs Sequential I/O&lt;/h2>
+&lt;p>Random I/O&lt;/p>
+&lt;ul>
+&lt;li>디스크에 무작위로 위치한 데이터를 읽고 쓰는 것을 말합니다.&lt;/li>
+&lt;li>디스크 헤드가 물리적으로 디스크의 여러 위치로 이동해야 하기 때문에 일반적으로 느립니다.&lt;/li>
+&lt;/ul>
+&lt;p>Sequential I/O&lt;/p>
+&lt;ul>
+&lt;li>디스크의 특정 영역에 연속적으로 위치한 데이터를 읽고 쓰는 것을 말합니다.&lt;/li>
+&lt;li>디스크 헤드가 물리적으로 연속된 위치로만 이동하면 되므로 일반적으로 빠르고 효율적입니다.&lt;/li>
+&lt;/ul>
+&lt;p>우리는 Random I/O의 횟수를 줄이는 방향으로, 즉 꼭 필요한 데이터만 읽도록 쿼리를 개선해야 합니다.&lt;/p>
+&lt;h2 id="index">Index&lt;/h2>
+&lt;p>인덱스가 없는 상태에서는 특정 쿼리를 수행하기 위해 전체 데이터를 훑어야 하므로 이는 크게 Random I/O를 초래합니다.
+디스크 헤드는 모든 데이터 블록을 무작위로 방문해야 하기 때문입니다.&lt;br>
+반면에, 인덱스가 존재하는 경우, 인덱스를 사용해 필요한 데이터를 빠르게 찾을 수 있습니다.
+디스크의 연속된 영역에 위치한 인덱스 블록을 순차적으로 읽음으로써 Sequential I/O가 가능하게 합니다.&lt;br>
+위에서 말한 Random I/O를 줄이는 방법으로 사용할 수 있다는 것입니다.&lt;br>
+(물론 Non-Clustered Index에서 주소가 가르키는 데이터를 가져오는 작업은 random I/O로 분류됩니다.)&lt;/p>
+&lt;h3 id="clustered-index">Clustered Index&lt;/h3>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-sh" data-lang="sh">&lt;span class="line">&lt;span class="cl">db.createCollection&lt;span class="o">(&lt;/span>&lt;span class="s2">&amp;#34;collection&amp;#34;&lt;/span>,&lt;span class="o">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> clusteredIndex: &lt;span class="o">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s2">&amp;#34;key&amp;#34;&lt;/span>: &lt;span class="o">{&lt;/span> _id: &lt;span class="m">1&lt;/span> &lt;span class="o">}&lt;/span>,
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s2">&amp;#34;unique&amp;#34;&lt;/span>: true,
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s2">&amp;#34;name&amp;#34;&lt;/span>: &lt;span class="s2">&amp;#34;clustered key&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="o">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="o">})&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>MongoDB 5.3부터는 &lt;a class="link" href="https://www.mongodb.com/docs/manual/reference/method/db.createCollection/#std-label-db.createCollection.clusteredIndex" target="_blank" rel="noopener"
+>clustered index&lt;/a>를 가진 컬렉션을 생성할 수 있게 되었습니다.&lt;/p>
+&lt;ul>
+&lt;li>일반 인덱스와 가장 다른 차이점은 인덱스 키의 순서대로 인덱스와 데이터가 물리적으로 저장된다는 것입니다.&lt;br>
+(일반 인덱스는 참조를 사용해서 데이터 위치를 가르킵니다.)&lt;br>
+그러므로 clustered index는 별도의 인덱스 저장 공간이 필요 없습니다.&lt;br>
+insert, update, delete 시 _id 인덱스에 별도 쓰기가 필요 없으므로 한번의 쓰기만을 필요로 합니다.&lt;/li>
+&lt;li>특히 range query에서 유용합니다.
+인덱스 키의 순서에 따라 물리적으로 저장된 데이터를 순차적으로 읽을 수 있게 됩니다.&lt;/li>
+&lt;li>insert 시 데이터가 순서대로 저장을 해야하기 때문에 추가적인 I/O 작업이 있을 수 있습니다.
+문서에서는 _id에 sequantial한 키를 포함하는 것을 권장합니다.&lt;/li>
+&lt;/ul>
+&lt;h3 id="none-clustered-index">None-Clustered Index&lt;/h3>
+&lt;p>&lt;img src="https://kjs92980.github.io/p/mongodb-indexes/mongodb-indexes1.svg"
+loading="lazy"
+alt="non-clustered index"
+>
+Primary index, Secondary index와 같이 clustered index가 아닌 인덱스를 말합니다.&lt;/p>
+&lt;h5 id="동작-방식">동작 방식&lt;/h5>
+&lt;ul>
+&lt;li>*&lt;a class="link" href="https://www.mongodb.com/docs/manual/core/wiredtiger/" target="_blank" rel="noopener"
+>WiredTiger 스토리지 엔진&lt;/a>에서는 기본적으로 B-Tree 기반의 인덱싱 알고리즘을 사용하고 있습니다.&lt;br>
+B-Tree 인덱스는 데이터를 물리적으로 정렬된 방식으로 저장하지는 않지만, 정렬된 키와 그 키에 연관된 데이터의 물리적 주소를 가지고 있습니다.&lt;/li>
+&lt;li>인덱스 키를 추가할 때는 B-Tree의 리프노드에 값을 추가하고 데이터가 저장된 위치를 저장합니다.&lt;br>
+테이블에 레코드를 추가하는 작업의 비용이 1, 1개의 인덱스가 있다고 가정하면 2(1*1 + 1)정도의 비용이 든다고 대략적으로 예측할 수 있습니다.&lt;/li>
+&lt;li>인덱스 키를 삭제할 때는 해당 키 값을 찾아서 삭제 마크를 합니다. 즉, 물리적으로 제거되는 것이 아니라, 삭제 마크를 사용하여 논리적으로 삭제된 것으로 표시합니다.&lt;br>
+마킹된 항목은 실제로 물리적으로 제거되거나 재사용될 수 있습니다.&lt;br>
+인덱스 키를 삭제하면 WiredTiger 스토리지 엔진은 Write-Ahead Log에 기록합니다. 실제 디스크에 이 변경 사항이 적용되는 시점은 &lt;code>syncPeriodSecs&lt;/code>라는 설정으로 제어할 수 있습니다.&lt;/li>
+&lt;li>인덱스 키를 수정할 때는 먼저 키 값을 삭제하고 새로운 키 값을 추가하는 방식으로 처리됩니다.&lt;/li>
+&lt;li>인덱스 키를 검색할 때는 B-Tree의 루트 노드부터 최종 리프 노드까지 비교하는 과정을 통해서 이동합니다.&lt;br>
+B-Tree 인덱스를 이용한 검색은 100% 일치, 앞 부분 일치, 그리고 range query 등에 사용될 수 있습니다.&lt;/li>
+&lt;li>인덱스 키 값의 사이즈는 작을수록 좋습니다.&lt;br>
+키 값의 사이즈가 커지면 하나의 인덱스 페이지가 담을 수 있는 인덱스 키 값의 개수가 작아지고, 이에 따라 간접적으로 B-Tree의 깊이가 더 깊어질 수 있습니다. 이는 디스크 I/O가 늘어나게 되어 성능 저하를 가져올 수 있습니다.&lt;/li>
+&lt;/ul>
+&lt;p>*WiredTiger 스토리지 엔진은 MongoDB 3.2부터 기본 엔진입니다.&lt;/p>
+&lt;h5 id="메모리">메모리&lt;/h5>
+&lt;ul>
+&lt;li>빠른 성능을 위해 &lt;a class="link" href="https://www.mongodb.com/docs/manual/tutorial/ensure-indexes-fit-ram/" target="_blank" rel="noopener"
+>인덱스가 RAM 용량 내에 들어가게 하는 전략&lt;/a>을 취할 수 있습니다. (디스크에서 인덱스를 읽지 않도록)&lt;/li>
+&lt;li>RAM에 들어갈 수 있는 인덱스의 양이 제한적이기 때문에, 인덱스의 크기가 RAM의 크기를 초과하면 MongoDB는 인덱스 데이터를 디스크에서 가져와야 합니다.&lt;/li>
+&lt;li>인덱싱된 필드의 값이 삽일될 때마다 증가하고 대부분의 쿼리가 최근에 추가된 문서를 선택하는 경우 가장 최근을 포함하는 인덱스 부분만 RAM에 유지하면 됩니다.&lt;/li>
+&lt;/ul>
+&lt;h3 id="ttl-index">TTL Index&lt;/h3>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-sh" data-lang="sh">&lt;span class="line">&lt;span class="cl">db.collection.createIndex&lt;span class="o">(&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="o">{&lt;/span> &lt;span class="s2">&amp;#34;createdDate&amp;#34;&lt;/span>: &lt;span class="m">1&lt;/span> &lt;span class="o">}&lt;/span>,
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="o">{&lt;/span> expireAfterSeconds: 3600&lt;span class="o">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="o">)&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>특정 시간이 지나면 컬렉션에서 문서를 자동으로 제거하는 &lt;a class="link" href="#none-clustered-index" >Index&lt;/a>입니다.&lt;/p>
+&lt;ul>
+&lt;li>TTL 인덱스로 데이터를 삭제하는 작업은 주로 오래된 데이터(메모리에 캐시되지 않은 데이터)가 될 가능성이 높은데, 이 경우 디스크를 읽어서 처리해야하는 경우가 많습니다.&lt;/li>
+&lt;li>TTL Monitor라는 별도의 백그라운드에서 도는 thread에서 동작합니다.&lt;/li>
+&lt;li>용량이 크거나 많은 인덱스를 가진 컬렉션에서 많은 도큐먼트가 삭제된다면 많은 디스크의 I/O를 유발하고 복제 지연을 발생시킬 수 있습니다. (도큐먼트와 연결된 인덱스 키도 모두 제거되어져야하기 때문입니다.)&lt;/li>
+&lt;/ul>
+&lt;h2 id="conclusion">Conclusion&lt;/h2>
+&lt;p>인덱스를 사용하면 쿼리의 성능 등을 향상시킬 수 있습니다.&lt;br>
+그러나 인덱스를 저장하기 위해 상당한 디스크 공간을 사용할 수 있고, insert, update의 경우 인덱스를 위한 추가 작업으로 부하를 더할 수 있습니다.&lt;br>
+application의 쿼리 패턴과 데이터 모델, 사용하는 서버 스펙(메모리, 디스크)을 고려하여 인덱스를 사용하는 것이 좋습니다.&lt;/p>
+&lt;h2 id="참조">참조&lt;/h2>
+&lt;ul>
+&lt;li>&lt;a class="link" href="https://www.mongodb.com/docs/manual/indexes/" target="_blank" rel="noopener"
+>MongoDB &amp;gt; Indexes&lt;/a>&lt;/li>
+&lt;li>&lt;a class="link" href="https://www.yes24.com/Product/Goods/58142119" target="_blank" rel="noopener"
+>Real MongoDB&lt;/a>&lt;/li>
+&lt;/ul></description></item><item><title>Windows make 사용하기 (using Chocolatey)</title><link>https://kjs92980.github.io/p/use-make-in-windows/</link><pubDate>Sun, 15 Jan 2023 17:45:00 +0900</pubDate><guid>https://kjs92980.github.io/p/use-make-in-windows/</guid><description>&lt;img src="https://kjs92980.github.io/p/use-make-in-windows/gnu-make.png" alt="Featured image of post Windows make 사용하기 (using Chocolatey)" />&lt;p>이 글에서는 Windows에서 GNU Make를 설치하고 make 명령어를 사용해보겠습니다.&lt;/p>
+&lt;h2 id="make">Make&lt;/h2>
+&lt;ul>
+&lt;li>
+&lt;p>Unix 계열 운영체제를 대상으로 만들어진 프로그램 빌드 도구를 말합니다.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>Makefile(빌드 자동화 스크립트 파일) 정의를 통해 복잡한 작업을 자동화 시킬 수 있습니다.&lt;/p>
+&lt;p>강의에서는 Docker를 올리고 내리는 작업을 각각 정의하였습니다.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>Windows에서 이 명령어를 수행하기 위해서는 별도의 설치가 필요합니다.&lt;/p>
+&lt;p>Windows용 intaller는 &lt;a class="link" href="https://gnuwin32.sourceforge.net/packages/make.htm" target="_blank" rel="noopener"
+>여기&lt;/a>를 통해 다운로드 받을 수 있습니다.&lt;/p>
+&lt;p>하지만 버전이 오래되기도 하고(3.81, 2006년 업데이트) 설치 후 환경 변수도 설정해줘야 해서 여기서는 &lt;a class="link" href="https://chocolatey.org/" target="_blank" rel="noopener"
+>Chocolatey&lt;/a>를 통해 설치하겠습니다.&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;h2 id="chocolatey">Chocolatey&lt;/h2>
+&lt;ul>
+&lt;li>
+&lt;p>Windows에서 사용할 수 있는 커맨드 라인 패키지 관리자입니다.&lt;/p>
+&lt;p>Linux의 yum, MacOS의 Homebrew를 생각하시면 됩니다.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>Choco의 설치 방법은 &lt;a class="link" href="https://chocolatey.org/install#individual" target="_blank" rel="noopener"
+>Installing Chocolatey&lt;/a>에 자세히 설명되어 있습니다.&lt;/p>
+&lt;p>함께 과정을 따라가봅시다.&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;h2 id="chocolatey-설치">Chocolatey 설치&lt;/h2>
+&lt;ol>
+&lt;li>먼저 PowerShell을 관리자로 실행합니다.&lt;/li>
+&lt;/ol>
+&lt;p>&lt;img src="https://kjs92980.github.io/p/use-make-in-windows/choco_0.png"
+width="752"
+height="428"
+loading="lazy"
+alt="PowerShell을 관리자로 실행"
+class="gallery-image"
+data-flex-grow="175"
+data-flex-basis="421px"
+>&lt;/p>
+&lt;ol start="2">
+&lt;li>&lt;a class="link" href="https://chocolatey.org/install#individual" target="_blank" rel="noopener"
+>Installing Chocolatey&lt;/a> 내 다운로드 명령어를 복사 후 붙여넣기 해줍니다.&lt;/li>
+&lt;/ol>
+&lt;p>&lt;img src="https://kjs92980.github.io/p/use-make-in-windows/choco_1.png"
+width="1828"
+height="232"
+loading="lazy"
+alt="명령어 실행"
+class="gallery-image"
+data-flex-grow="787"
+data-flex-basis="1891px"
+>&lt;/p>
+&lt;ol start="3">
+&lt;li>Choco 설치가 완료되었습니다. &lt;code>choco&lt;/code>또는 &lt;code>choco -?&lt;/code>로 확인합니다.&lt;/li>
+&lt;/ol>
+&lt;p>&lt;img src="https://kjs92980.github.io/p/use-make-in-windows/choco_2.png"
+width="603"
+height="73"
+loading="lazy"
+alt="Chocolatey 설치 완료 확인"
+class="gallery-image"
+data-flex-grow="826"
+data-flex-basis="1982px"
+>&lt;/p>
+&lt;h2 id="make-설치">Make 설치&lt;/h2>
+&lt;ul>
+&lt;li>Choco를 통해 make를 설치하는 방법은 간단합니다.&lt;/li>
+&lt;/ul>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-fallback" data-lang="fallback">&lt;span class="line">&lt;span class="cl">choco install make
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>&lt;img src="https://kjs92980.github.io/p/use-make-in-windows/make_0.png"
+width="652"
+height="247"
+loading="lazy"
+alt="Chocolatey를 통해 make 설치"
+class="gallery-image"
+data-flex-grow="263"
+data-flex-basis="633px"
+>&lt;/p>
+&lt;ul>
+&lt;li>설치가 완료되었습니다! 정의해둔 위치에서 make 명령어를 수행합니다.&lt;/li>
+&lt;/ul>
+&lt;p>&lt;img src="https://kjs92980.github.io/p/use-make-in-windows/make_1.png"
+width="972"
+height="158"
+loading="lazy"
+class="gallery-image"
+data-flex-grow="615"
+data-flex-basis="1476px"
+>&lt;/p>
+&lt;p>&lt;img src="https://kjs92980.github.io/p/use-make-in-windows/make_2.png"
+width="1401"
+height="279"
+loading="lazy"
+alt="Makefile 위치에서 make 실행"
+class="gallery-image"
+data-flex-grow="502"
+data-flex-basis="1205px"
+>&lt;/p>
+&lt;h2 id="마치며">마치며&lt;/h2>
+&lt;ul>
+&lt;li>Chocolatey를 통해 간단한 명령어로 패키지를 업데이트하거나 다른 패키지를 설치하는데 유용하게 사용할 수 있을 것입니다.&lt;/li>
+&lt;li>Makefile에 자동화 할 동작이 있다면 추가로 정의해봐도 좋을 것 같습니다.&lt;/li>
+&lt;/ul>
+&lt;p>오늘도 좋은 하루 되세요. 감사합니다. 😁&lt;/p></description></item><item><title>Archives</title><link>https://kjs92980.github.io/archives/</link><pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate><guid>https://kjs92980.github.io/archives/</guid><description/></item><item><title>Hello World</title><link>https://kjs92980.github.io/p/hello-world/</link><pubDate>Sat, 01 Jan 2022 00:00:00 +0000</pubDate><guid>https://kjs92980.github.io/p/hello-world/</guid><description>&lt;img src="https://kjs92980.github.io/p/hello-world/cover.jpg" alt="Featured image of post Hello World" />&lt;h1 id="h1-제목">h1 제목&lt;/h1>
+&lt;h2 id="h2-제목">h2 제목&lt;/h2>
+&lt;h3 id="h3-제목">h3 제목&lt;/h3>
+&lt;h4 id="h4-제목">h4 제목&lt;/h4>
+&lt;ul>
+&lt;li>리스트 1&lt;/li>
+&lt;li>리스트 2&lt;/li>
+&lt;li>리스트 3&lt;/li>
+&lt;/ul>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-go" data-lang="go">&lt;span class="line">&lt;span class="cl">&lt;span class="nx">코드블럭&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kn">package&lt;/span> &lt;span class="nx">main&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kn">import&lt;/span> &lt;span class="s">&amp;#34;fmt&amp;#34;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kd">func&lt;/span> &lt;span class="nf">main&lt;/span>&lt;span class="p">(){&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">fmt&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nf">Println&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s">&amp;#34;Hello World&amp;#34;&lt;/span>&lt;span class="p">)&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div></description></item><item><title>Search</title><link>https://kjs92980.github.io/search/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://kjs92980.github.io/search/</guid><description/></item></channel></rss>

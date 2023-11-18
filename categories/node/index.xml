@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Node on kjs92980</title><link>https://kjs92980.github.io/categories/node/</link><description>Recent content in Node on kjs92980</description><generator>Hugo -- gohugo.io</generator><language>ko</language><lastBuildDate>Sun, 18 Jun 2023 13:26:26 +0900</lastBuildDate><atom:link href="https://kjs92980.github.io/categories/node/index.xml" rel="self" type="application/rss+xml"/><item><title>Node.js Express Winston 사용하여 로깅하기</title><link>https://kjs92980.github.io/p/node-logs-winston/</link><pubDate>Sun, 18 Jun 2023 13:26:26 +0900</pubDate><guid>https://kjs92980.github.io/p/node-logs-winston/</guid><description>&lt;img src="https://kjs92980.github.io/img/node.png" alt="Featured image of post Node.js Express Winston 사용하여 로깅하기" />&lt;h2 id="why">Why?&lt;/h2>
+&lt;ul>
+&lt;li>Node.js에서 &lt;a class="link" href="https://nodejs.org/api/console.html" target="_blank" rel="noopener"
+>console&lt;/a>에 내장된 전역 객체로 표준 출력 또는 표준 에러 출력으로 로그를 기록하는데 사용합니다.&lt;/li>
+&lt;li>&lt;code>console.log()&lt;/code> 또는 &lt;code>console.error()&lt;/code>로 출력한 로그는 Node.js application이 실행되는 콘솔에 바로 출력되므로, application이 종료되면 로그는 사라집니다.&lt;/li>
+&lt;li>리다이렉션(&amp;rsquo;&amp;gt;&amp;rsquo;)을 사용하여 파일로 리다이렉트를 할 수는 있지만 로그 레벨이나 형식을 설정하거나, 로그 파일을 자동으로 rotate하는 등의 기능은 제공하지 않습니다.&lt;/li>
+&lt;li>우리는 &lt;a class="link" href="https://github.com/winstonjs/winston" target="_blank" rel="noopener"
+>Winston&lt;/a>과 같은 로깅 모듈을 사용하여 효과적으로 로그를 파일로 관리할 수 있습니다.
+&lt;ul>
+&lt;li>로그 레벨, 형식, transport, rotate&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;p>이 글에서는 &lt;a class="link" href="https://github.com/winstonjs/winston" target="_blank" rel="noopener"
+>Winston&lt;/a>으로 사용해서 Node.js application의 로그를 특정 위치에 저장해보고,&lt;br>
+Docker container로 실행시킬 때 Volume을 사용하여 로컬 호스트에도 로그 파일이 저장되도록 설정해보겠습니다.&lt;/p>
+&lt;h2 id="install">Install&lt;/h2>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-sh" data-lang="sh">&lt;span class="line">&lt;span class="cl">npm install winston
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;h2 id="use">Use&lt;/h2>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-js" data-lang="js">&lt;span class="line">&lt;span class="cl">&lt;span class="kr">const&lt;/span> &lt;span class="nx">winston&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nx">require&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s1">&amp;#39;winston&amp;#39;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kr">const&lt;/span> &lt;span class="nx">logger&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nx">winston&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">createLogger&lt;/span>&lt;span class="p">({&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">transports&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="p">[&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">new&lt;/span> &lt;span class="nx">winston&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">transports&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">Console&lt;/span>&lt;span class="p">()&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">]&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">});&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nx">logger&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">info&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s1">&amp;#39;Hello world&amp;#39;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// {&amp;#34;level&amp;#34;:&amp;#34;info&amp;#34;,&amp;#34;message&amp;#34;:&amp;#34;Hello world&amp;#34;}
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;h3 id="format">format&lt;/h3>
+&lt;p>format은 로그 메시지의 출력 포맷을 결정합니다.
+&lt;code>winston.format&lt;/code> 모듈은 로그 메시지에 대한 사전 설정된 포맷을 사용할 수도 있고 사용자가 정의한 포맷을 사용할 수도 있습니다.
+&lt;code>winston.format.combine&lt;/code>으로 여러 포맷을 하나의 포맷으로 결합할 수도 있습니다.&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-js" data-lang="js">&lt;span class="line">&lt;span class="cl">&lt;span class="kr">const&lt;/span> &lt;span class="nx">logger&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nx">winston&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">createLogger&lt;/span>&lt;span class="p">({&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">format&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="nx">winston&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">format&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">combine&lt;/span>&lt;span class="p">(&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">winston&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">format&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">label&lt;/span>&lt;span class="p">({&lt;/span>&lt;span class="nx">label&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s1">&amp;#39;service&amp;#39;&lt;/span>&lt;span class="p">}),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">winston&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">format&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">timestamp&lt;/span>&lt;span class="p">({&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">format&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s1">&amp;#39;YYYY-MM-DDTHH:mm:ss.SSSZ&amp;#39;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">winston&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">format&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">printf&lt;/span>&lt;span class="p">(({&lt;/span>&lt;span class="nx">level&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">message&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">label&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">timestamp&lt;/span>&lt;span class="p">})&lt;/span> &lt;span class="p">=&amp;gt;&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="sb">`&lt;/span>&lt;span class="si">${&lt;/span>&lt;span class="nx">timestamp&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="sb"> [&lt;/span>&lt;span class="si">${&lt;/span>&lt;span class="nx">label&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="sb">] &lt;/span>&lt;span class="si">${&lt;/span>&lt;span class="nx">level&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="sb">: &lt;/span>&lt;span class="si">${&lt;/span>&lt;span class="nx">message&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="sb">`&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">})&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">transports&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="p">[&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">new&lt;/span> &lt;span class="nx">winston&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">transports&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">Console&lt;/span>&lt;span class="p">()&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">],&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">});&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nx">logger&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">info&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s1">&amp;#39;Hello world&amp;#39;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// 2023-01-01T12:00:00.000+09:00 [service] info: Hello world
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;ul>
+&lt;li>&lt;code>label&lt;/code>: 각 메시지에 사용자가 정의한 필드를 추가합니다.&lt;/li>
+&lt;li>&lt;code>timestamp&lt;/code>: 메시지를 받은 timestamp를 추가합니다. timestamp의 format도 정의할 수 있습니다.&lt;/li>
+&lt;li>&lt;code>printf&lt;/code>: 메시지의 최종 출력을 정의합니다.&lt;/li>
+&lt;/ul>
+&lt;h3 id="transports">transports&lt;/h3>
+&lt;p>로그 메시지가 출력되는 위치를 결정합니다. 로그 파일, 콘솔, 외부 서버 등이 될 수 있고, 여러 개의 transport를 동시에 사용하여 동시에 다른 위치에 메시지를 출력할 수 있습니다.&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-js" data-lang="js">&lt;span class="line">&lt;span class="cl">&lt;span class="kr">const&lt;/span> &lt;span class="nx">logger&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nx">winston&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">createLogger&lt;/span>&lt;span class="p">({&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">format&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="nx">winston&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">format&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">combine&lt;/span>&lt;span class="p">(&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">winston&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">format&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">label&lt;/span>&lt;span class="p">({&lt;/span>&lt;span class="nx">label&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s1">&amp;#39;service&amp;#39;&lt;/span>&lt;span class="p">}),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">winston&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">format&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">timestamp&lt;/span>&lt;span class="p">({&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">format&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s1">&amp;#39;YYYY-MM-DDTHH:mm:ss.SSSZ&amp;#39;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">winston&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">format&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">printf&lt;/span>&lt;span class="p">(({&lt;/span>&lt;span class="nx">level&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">message&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">label&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">timestamp&lt;/span>&lt;span class="p">})&lt;/span> &lt;span class="p">=&amp;gt;&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="sb">`&lt;/span>&lt;span class="si">${&lt;/span>&lt;span class="nx">timestamp&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="sb"> [&lt;/span>&lt;span class="si">${&lt;/span>&lt;span class="nx">label&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="sb">] &lt;/span>&lt;span class="si">${&lt;/span>&lt;span class="nx">level&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="sb">: &lt;/span>&lt;span class="si">${&lt;/span>&lt;span class="nx">message&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="sb">`&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">})&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">transports&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="p">[&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">new&lt;/span> &lt;span class="nx">winston&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">transports&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">File&lt;/span>&lt;span class="p">({&lt;/span> &lt;span class="nx">filename&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s1">&amp;#39;service.log&amp;#39;&lt;/span>&lt;span class="p">}),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">],&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">});&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nx">logger&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">info&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s1">&amp;#39;Hello world&amp;#39;&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// 2023-01-01T12:00:00.000+09:00 [service] info: Hello world
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>위 예제에서는 &amp;lsquo;service.log&amp;rsquo; 파일로 출력하고 있습니다.
+이렇게 하면 해당 한 파일에 로그가 계속 쌓이게 되는데 로그 파일의 rotation은 파일이 무제한으로 커지는 것을 방지할 수 있습니다.
+우리는 &lt;a class="link" href="https://github.com/winstonjs/winston-daily-rotate-file" target="_blank" rel="noopener"
+>winston-daily-rotate-file&lt;/a>을 사용해서 파일 rotation을 설정해보겠습니다.&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-js" data-lang="js">&lt;span class="line">&lt;span class="cl">&lt;span class="kr">import&lt;/span> &lt;span class="nx">DailyRotateFile&lt;/span> &lt;span class="nx">from&lt;/span> &lt;span class="s1">&amp;#39;winston-daily-rotate-file&amp;#39;&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kr">const&lt;/span> &lt;span class="nx">logger&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nx">winston&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">createLogger&lt;/span>&lt;span class="p">({&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">format&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="nx">winston&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">format&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">combine&lt;/span>&lt;span class="p">(&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">winston&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">format&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">label&lt;/span>&lt;span class="p">({&lt;/span>&lt;span class="nx">label&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s1">&amp;#39;service&amp;#39;&lt;/span>&lt;span class="p">}),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">winston&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">format&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">timestamp&lt;/span>&lt;span class="p">({&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">format&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s1">&amp;#39;YYYY-MM-DDTHH:mm:ss.SSSZ&amp;#39;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">winston&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">format&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">printf&lt;/span>&lt;span class="p">(({&lt;/span>&lt;span class="nx">level&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">message&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">label&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">timestamp&lt;/span>&lt;span class="p">})&lt;/span> &lt;span class="p">=&amp;gt;&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="sb">`&lt;/span>&lt;span class="si">${&lt;/span>&lt;span class="nx">timestamp&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="sb"> [&lt;/span>&lt;span class="si">${&lt;/span>&lt;span class="nx">label&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="sb">] &lt;/span>&lt;span class="si">${&lt;/span>&lt;span class="nx">level&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="sb">: &lt;/span>&lt;span class="si">${&lt;/span>&lt;span class="nx">message&lt;/span>&lt;span class="si">}&lt;/span>&lt;span class="sb">`&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">})&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">transports&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="p">[&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">new&lt;/span> &lt;span class="nx">DailyRotateFile&lt;/span>&lt;span class="p">({&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">filename&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s1">&amp;#39;service.log&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">datePattern&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s1">&amp;#39;YYYY-MM-DD_HH&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">maxSize&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s1">&amp;#39;20m&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">maxFiles&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s1">&amp;#39;7d&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">})&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">],&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">});&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// 파일명 service.log.2023-01-01_12
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;ul>
+&lt;li>&lt;code>filename&lt;/code>: 로깅에 사용할 파일 이름입니다.&lt;/li>
+&lt;li>&lt;code>dataPattern&lt;/code>: rotation에 사용할 moment.js 날짜 포맷을 나타냅니다.&lt;/li>
+&lt;li>&lt;code>maxSize&lt;/code>: rotation할 파일의 최대 크기입니다. 파일의 크기가 maxSize에 도달하면 새로운 파일이 생성됩니다.&lt;/li>
+&lt;li>&lt;code>maxFiles&lt;/code>: 보관할 최대 파일 개수, 일수를 말합니다. 예제의 경우 7일이 경과하면 자동으로 파일이 삭제됩니다.&lt;/li>
+&lt;/ul>
+&lt;p>이 외에도 &lt;code>zippedArchive&lt;/code> 옵션으로 로그 파일을 압축할 수도, &lt;code>level&lt;/code>로 로깅 레벨을 설정할 수도 있습니다.
+서버 application에서는 access 로그(incoming request에 대한 로그)도 파일로 기록하면 좋겠죠.&lt;br>
+&lt;a class="link" href="https://github.com/expressjs/morgan" target="_blank" rel="noopener"
+>Morgan&lt;/a>을 winston logger과 함께 사용하면 winston의 기능을 사용해서 로그를 잘 관리할 수 있습니다.&lt;/p>
+&lt;h2 id="morgan">Morgan&lt;/h2>
+&lt;p>&lt;a class="link" href="https://github.com/expressjs/morgan" target="_blank" rel="noopener"
+>Morgan&lt;/a>은 HTTP request 로그 미들웨어로 요청, 응답에 대한 정보를 로그로 남길 수 있습니다.
+다양한 출력 포맷과 로그 레벨, rotation, 압축을 사용하기 위해 winston 모듈과 함께 사용해보도록 합시다.&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-js" data-lang="js">&lt;span class="line">&lt;span class="cl">&lt;span class="kr">const&lt;/span> &lt;span class="nx">accessLogger&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nx">winston&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">createLogger&lt;/span>&lt;span class="p">({&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">format&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="nx">winston&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">format&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">combine&lt;/span>&lt;span class="p">(&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">winston&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">format&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">timestamp&lt;/span>&lt;span class="p">({&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">format&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s1">&amp;#39;YYYY-MM-DDTHH:mm:ss.SSSZ&amp;#39;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">winston&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">format&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">printf&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">info&lt;/span> &lt;span class="p">=&amp;gt;&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kd">let&lt;/span> &lt;span class="nx">message&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nx">info&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">message&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="k">typeof&lt;/span> &lt;span class="nx">message&lt;/span> &lt;span class="o">===&lt;/span> &lt;span class="s1">&amp;#39;object&amp;#39;&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nb">Object&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">assign&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">info&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">message&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">delete&lt;/span> &lt;span class="nx">info&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">message&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="nx">JSON&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">stringify&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">info&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">transports&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="p">[&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">new&lt;/span> &lt;span class="nx">DailyRotateFile&lt;/span>&lt;span class="p">({&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">filename&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s1">&amp;#39;access.log&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">datePattern&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s1">&amp;#39;YYYY-MM-DD_HH&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">maxSize&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s1">&amp;#39;20m&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">maxFiles&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s1">&amp;#39;7d&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">})&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">],&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">});&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nx">morgan&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">format&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s1">&amp;#39;json&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="nx">tokens&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">req&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">res&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">=&amp;gt;&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="nx">JSON&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">stringify&lt;/span>&lt;span class="p">({&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s1">&amp;#39;ip&amp;#39;&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="nx">tokens&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="s1">&amp;#39;remote-addr&amp;#39;&lt;/span>&lt;span class="p">](&lt;/span>&lt;span class="nx">req&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">res&lt;/span>&lt;span class="p">),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s1">&amp;#39;method&amp;#39;&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="nx">tokens&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">method&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">req&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">res&lt;/span>&lt;span class="p">),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s1">&amp;#39;url&amp;#39;&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="nx">tokens&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">url&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">req&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">res&lt;/span>&lt;span class="p">),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s1">&amp;#39;status&amp;#39;&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="nx">tokens&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">status&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">req&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">res&lt;/span>&lt;span class="p">),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s1">&amp;#39;contentLength&amp;#39;&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="nx">tokens&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">res&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">req&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">res&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="s1">&amp;#39;content-length&amp;#39;&lt;/span>&lt;span class="p">),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s1">&amp;#39;duration&amp;#39;&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="nx">tokens&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="s1">&amp;#39;response-time&amp;#39;&lt;/span>&lt;span class="p">](&lt;/span>&lt;span class="nx">req&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">res&lt;/span>&lt;span class="p">),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s1">&amp;#39;version&amp;#39;&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="s1">&amp;#39;HTTP/&amp;#39;&lt;/span> &lt;span class="o">+&lt;/span> &lt;span class="nx">tokens&lt;/span>&lt;span class="p">[&lt;/span>&lt;span class="s1">&amp;#39;http-version&amp;#39;&lt;/span>&lt;span class="p">](&lt;/span>&lt;span class="nx">req&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">res&lt;/span>&lt;span class="p">),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="s1">&amp;#39;host&amp;#39;&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="nx">tokens&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">req&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">req&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">res&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="s1">&amp;#39;hostname&amp;#39;&lt;/span>&lt;span class="p">),&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">});&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">});&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kr">const&lt;/span> &lt;span class="nx">accessStream&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">write&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="nx">message&lt;/span> &lt;span class="p">=&amp;gt;&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kr">const&lt;/span> &lt;span class="p">{&lt;/span>&lt;span class="nx">ip&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">method&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">url&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">status&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">contentLength&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">duration&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">proto&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">host&lt;/span>&lt;span class="p">}&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nx">JSON&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">parse&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">message&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nx">accessLogger&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">info&lt;/span>&lt;span class="p">({&lt;/span>&lt;span class="nx">ip&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">method&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">url&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">status&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">contentLength&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">duration&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">proto&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nx">host&lt;/span>&lt;span class="p">});&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">};&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kr">const&lt;/span> &lt;span class="nx">app&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nx">express&lt;/span>&lt;span class="p">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nx">app&lt;/span>&lt;span class="p">.&lt;/span>&lt;span class="nx">use&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="nx">morgan&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="s1">&amp;#39;json&amp;#39;&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="p">{&lt;/span>&lt;span class="nx">stream&lt;/span>&lt;span class="o">:&lt;/span> &lt;span class="nx">accessStream&lt;/span>&lt;span class="p">}));&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// {&amp;#34;level&amp;#34;:&amp;#34;info&amp;#34;,&amp;#34;timestamp&amp;#34;:&amp;#34;2023-01-01T00:00:00.000+09:00&amp;#34;,&amp;#34;ip&amp;#34;:&amp;#34;127.0.0.1&amp;#34;,&amp;#34;method&amp;#34;:&amp;#34;GET&amp;#34;,&amp;#34;url&amp;#34;:&amp;#34;/health&amp;#34;,&amp;#34;status&amp;#34;:&amp;#34;200&amp;#34;,&amp;#34;duration&amp;#34;:&amp;#34;4.900&amp;#34;,&amp;#34;version&amp;#34;:&amp;#34;HTTP/1.1&amp;#34;}
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>write()을 포함한 accessStream을 구현하여 morgan에 설정을 해줍니다.
+accessLogger.info()로 추가하게 되면 message의 필드들로 들어가게 되는데 message 밖으로 필드를 꺼내기 위해 &lt;code>winston.format.printf&lt;/code>를 정의했습니다.
+예제에서는 &amp;lsquo;json&amp;rsquo;이라는 포맷을 사용자가 정의했지만 이미 정의된 &amp;rsquo;tiny&amp;rsquo;, &amp;lsquo;short&amp;rsquo;, &amp;lsquo;common&amp;rsquo; 등으로 설정하여 보다 간단하게 설정할 수도 있습니다.&lt;/p>
+&lt;h2 id="docker-volumes">Docker Volumes&lt;/h2>
+&lt;p>express application을 docker container로 실행하면 이 container가 down했을 때 로그 파일도 제거됩니다.
+매번 새로운 버전으로 업데이트할 때마다 로그 파일이 제거되면 서비스 운영이 어려움이 있을 것입니다.
+이를 방지하기 위해 중요한 로그 데이터는 외부 볼륨에 저장하거나, 별도의 로그 관리 시스템에서 수집할 수 있습니다.&lt;br>
+우리는 docker volumes을 통해 호스트 시스템 디렉토리에 마운트해서 container가 down되더라도 로그 파일이 유지될 수 있도록 설정해보겠습니다.&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-yml" data-lang="yml">&lt;span class="line">&lt;span class="cl">&lt;span class="nt">version&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;3.8&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="nt">services&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">backend&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">container_name&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">backend&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">image&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">backend:${TAG}&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">ports&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="s2">&amp;#34;8080:8080&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">volumes&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="l">/local/path/log:/container/path/log&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>호스트(로컬) 경로인 &amp;lsquo;/local/path/log&amp;rsquo;를 컨테이너 내부 경로인 &amp;lsquo;/container/path/log&amp;rsquo;와 연결하고, 호스트의 로그 파일을 컨테이너의 로그 경로로 마운트합니다.&lt;br>
+이를 통해 로컬 파일 시스템과 컨테이너 간에 데이터를 공유하고, 컨테이너 내부에서 해당 경로에 액세스할 수 있습니다.&lt;br>
+이제는 container가 down되더라도 &amp;lsquo;/local/path/log&amp;rsquo;에 로그 파일이 남아 조회해볼 수 있습니다.&lt;/p>
+&lt;h2 id="conclusion">Conclusion&lt;/h2>
+&lt;ul>
+&lt;li>Node.js에서 winston이라는 사용자 정의 포맷, rotation, 압축 등을 지원하는 로깅 모듈을 통해 다양한 경로로 출력할 수 있습니다.&lt;/li>
+&lt;li>HTTP request, response를 기록하는 morgan도 winston과 함께 사용하면 위 기능들로 로그 파일을 관리할 수 있습니다.&lt;/li>
+&lt;li>docker container로 application을 운영하는 경우 volumes로 로그 파일을 호스트에 마운트하면 container down 시에도 호스트에 로그 파일을 유지할 수 있습니다.&lt;/li>
+&lt;/ul>
+&lt;h2 id="참조">참조&lt;/h2>
+&lt;ul>
+&lt;li>&lt;a class="link" href="https://github.com/winstonjs/winston" target="_blank" rel="noopener"
+>Github: Winston&lt;/a>&lt;/li>
+&lt;li>&lt;a class="link" href="https://github.com/winstonjs/winston-daily-rotate-file" target="_blank" rel="noopener"
+>Github: winston-daily-rotate-file&lt;/a>&lt;/li>
+&lt;li>&lt;a class="link" href="https://github.com/expressjs/morgan" target="_blank" rel="noopener"
+>Github: Morgan&lt;/a>&lt;/li>
+&lt;li>&lt;a class="link" href="https://docs.docker.com/storage/volumes/" target="_blank" rel="noopener"
+>Docker Docs &amp;gt; Volumes&lt;/a>&lt;/li>
+&lt;/ul></description></item></channel></rss>

@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Windows on kjs92980</title><link>https://kjs92980.github.io/tags/windows/</link><description>Recent content in Windows on kjs92980</description><generator>Hugo -- gohugo.io</generator><language>ko</language><lastBuildDate>Sat, 18 Nov 2023 21:36:30 +0900</lastBuildDate><atom:link href="https://kjs92980.github.io/tags/windows/index.xml" rel="self" type="application/rss+xml"/><item><title>Windows에서 Docker 사용 시 MySQL 한글 깨짐 해결: Custom Configuration 적용하기</title><link>https://kjs92980.github.io/p/custom-configuration-to-mysql-in-windows/</link><pubDate>Sat, 18 Nov 2023 21:36:30 +0900</pubDate><guid>https://kjs92980.github.io/p/custom-configuration-to-mysql-in-windows/</guid><description>&lt;img src="https://kjs92980.github.io/img/docker.png" alt="Featured image of post Windows에서 Docker 사용 시 MySQL 한글 깨짐 해결: Custom Configuration 적용하기" />&lt;h2 id="why">Why&lt;/h2>
+&lt;p>Windows에서 Docker를 이용해 MySQL 이미지를 구동하던 중 한글이 깨지는 문제가 발생했습니다.&lt;br>
+볼륨으로 마운트한 *.cnf 파일에 characterset을 설정했지만, Windows에서는 이 파일이 777 권한으로 인식되면서 설정이 제대로 반영되지 않는 문제가 발생했습니다.&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-fallback" data-lang="fallback">&lt;span class="line">&lt;span class="cl">World-writable config file &amp;#39;/etc/my.cnf&amp;#39; is ignored
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>여기서는 파일명을 my.cnf로 정의하겠습니다.&lt;/p>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-fallback" data-lang="fallback">&lt;span class="line">&lt;span class="cl">[client]
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">default-character-set = utf8mb4
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">[mysqld]
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">authentication-policy = mysql_native_password
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>이 문제는 Windows와 Linux의 파일 시스템 차이에서 기인합니다.&lt;br>
+Windows에서 Docker를 사용하여 Linux 컨테이너 내의 볼륨으로 파일을 마운트할 때, 해당 파일의 권한 설정이 항상 일관적이지 않을 수 있습니다.&lt;/p>
+&lt;h2 id="todo">ToDo&lt;/h2>
+&lt;p>이러한 문제를 해결하기 위해, 다음과 같은 접근 방법을 사용했습니다.&lt;/p>
+&lt;ol>
+&lt;li>Dockerfile 작성&lt;/li>
+&lt;/ol>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-Dockerfile" data-lang="Dockerfile">&lt;span class="line">&lt;span class="cl">&lt;span class="k">FROM&lt;/span>&lt;span class="s"> mysql:8.0.30&lt;/span>&lt;span class="err">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="err">&lt;/span>&lt;span class="k">COPY&lt;/span> ./db/conf.d/my.cnf /etc/mysql/conf.d/my.cnf&lt;span class="err">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="err">&lt;/span>&lt;span class="k">RUN&lt;/span> chmod &lt;span class="m">644&lt;/span> /etc/mysql/conf.d/my.cnf&lt;span class="err">
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;ul>
+&lt;li>MySQL의 기본 설정을 변경하기 위해 커스텀 Dockerfile을 만들었습니다. 이 파일을 통해 my.cnf 파일의 권한을 설정합니다.&lt;/li>
+&lt;/ul>
+&lt;ol start="2">
+&lt;li>Docker Compose 파일 수정&lt;/li>
+&lt;/ol>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-yaml" data-lang="yaml">&lt;span class="line">&lt;span class="cl">&lt;span class="nt">version&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="s2">&amp;#34;3.8&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w">&lt;/span>&lt;span class="nt">services&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">mysql&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">build&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w"> &lt;/span>&lt;span class="l">.&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>&lt;span class="nt">ports&lt;/span>&lt;span class="p">:&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="w"> &lt;/span>- &lt;span class="s2">&amp;#34;3306:3306&amp;#34;&lt;/span>&lt;span class="w">
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;ul>
+&lt;li>Custom image를 빌드하고 실행하기 위해 Docker Compose 파일을 수정했습니다.&lt;/li>
+&lt;/ul>
+&lt;ol start="3">
+&lt;li>이미지 빌드 및 컨테이너 실행&lt;/li>
+&lt;/ol>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-bash" data-lang="bash">&lt;span class="line">&lt;span class="cl">docker-compose up -d --build
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;ul>
+&lt;li>새로운 Dockerfile을 이용해 이미지를 빌드하고 컨테이너를 실행합니다.&lt;/li>
+&lt;/ul></description></item><item><title>Windows make 사용하기 (using Chocolatey)</title><link>https://kjs92980.github.io/p/use-make-in-windows/</link><pubDate>Sun, 15 Jan 2023 17:45:00 +0900</pubDate><guid>https://kjs92980.github.io/p/use-make-in-windows/</guid><description>&lt;img src="https://kjs92980.github.io/p/use-make-in-windows/gnu-make.png" alt="Featured image of post Windows make 사용하기 (using Chocolatey)" />&lt;p>이 글에서는 Windows에서 GNU Make를 설치하고 make 명령어를 사용해보겠습니다.&lt;/p>
+&lt;h2 id="make">Make&lt;/h2>
+&lt;ul>
+&lt;li>
+&lt;p>Unix 계열 운영체제를 대상으로 만들어진 프로그램 빌드 도구를 말합니다.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>Makefile(빌드 자동화 스크립트 파일) 정의를 통해 복잡한 작업을 자동화 시킬 수 있습니다.&lt;/p>
+&lt;p>강의에서는 Docker를 올리고 내리는 작업을 각각 정의하였습니다.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>Windows에서 이 명령어를 수행하기 위해서는 별도의 설치가 필요합니다.&lt;/p>
+&lt;p>Windows용 intaller는 &lt;a class="link" href="https://gnuwin32.sourceforge.net/packages/make.htm" target="_blank" rel="noopener"
+>여기&lt;/a>를 통해 다운로드 받을 수 있습니다.&lt;/p>
+&lt;p>하지만 버전이 오래되기도 하고(3.81, 2006년 업데이트) 설치 후 환경 변수도 설정해줘야 해서 여기서는 &lt;a class="link" href="https://chocolatey.org/" target="_blank" rel="noopener"
+>Chocolatey&lt;/a>를 통해 설치하겠습니다.&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;h2 id="chocolatey">Chocolatey&lt;/h2>
+&lt;ul>
+&lt;li>
+&lt;p>Windows에서 사용할 수 있는 커맨드 라인 패키지 관리자입니다.&lt;/p>
+&lt;p>Linux의 yum, MacOS의 Homebrew를 생각하시면 됩니다.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>Choco의 설치 방법은 &lt;a class="link" href="https://chocolatey.org/install#individual" target="_blank" rel="noopener"
+>Installing Chocolatey&lt;/a>에 자세히 설명되어 있습니다.&lt;/p>
+&lt;p>함께 과정을 따라가봅시다.&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;h2 id="chocolatey-설치">Chocolatey 설치&lt;/h2>
+&lt;ol>
+&lt;li>먼저 PowerShell을 관리자로 실행합니다.&lt;/li>
+&lt;/ol>
+&lt;p>&lt;img src="https://kjs92980.github.io/p/use-make-in-windows/choco_0.png"
+width="752"
+height="428"
+loading="lazy"
+alt="PowerShell을 관리자로 실행"
+class="gallery-image"
+data-flex-grow="175"
+data-flex-basis="421px"
+>&lt;/p>
+&lt;ol start="2">
+&lt;li>&lt;a class="link" href="https://chocolatey.org/install#individual" target="_blank" rel="noopener"
+>Installing Chocolatey&lt;/a> 내 다운로드 명령어를 복사 후 붙여넣기 해줍니다.&lt;/li>
+&lt;/ol>
+&lt;p>&lt;img src="https://kjs92980.github.io/p/use-make-in-windows/choco_1.png"
+width="1828"
+height="232"
+loading="lazy"
+alt="명령어 실행"
+class="gallery-image"
+data-flex-grow="787"
+data-flex-basis="1891px"
+>&lt;/p>
+&lt;ol start="3">
+&lt;li>Choco 설치가 완료되었습니다. &lt;code>choco&lt;/code>또는 &lt;code>choco -?&lt;/code>로 확인합니다.&lt;/li>
+&lt;/ol>
+&lt;p>&lt;img src="https://kjs92980.github.io/p/use-make-in-windows/choco_2.png"
+width="603"
+height="73"
+loading="lazy"
+alt="Chocolatey 설치 완료 확인"
+class="gallery-image"
+data-flex-grow="826"
+data-flex-basis="1982px"
+>&lt;/p>
+&lt;h2 id="make-설치">Make 설치&lt;/h2>
+&lt;ul>
+&lt;li>Choco를 통해 make를 설치하는 방법은 간단합니다.&lt;/li>
+&lt;/ul>
+&lt;div class="highlight">&lt;pre tabindex="0" class="chroma">&lt;code class="language-fallback" data-lang="fallback">&lt;span class="line">&lt;span class="cl">choco install make
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/div>&lt;p>&lt;img src="https://kjs92980.github.io/p/use-make-in-windows/make_0.png"
+width="652"
+height="247"
+loading="lazy"
+alt="Chocolatey를 통해 make 설치"
+class="gallery-image"
+data-flex-grow="263"
+data-flex-basis="633px"
+>&lt;/p>
+&lt;ul>
+&lt;li>설치가 완료되었습니다! 정의해둔 위치에서 make 명령어를 수행합니다.&lt;/li>
+&lt;/ul>
+&lt;p>&lt;img src="https://kjs92980.github.io/p/use-make-in-windows/make_1.png"
+width="972"
+height="158"
+loading="lazy"
+class="gallery-image"
+data-flex-grow="615"
+data-flex-basis="1476px"
+>&lt;/p>
+&lt;p>&lt;img src="https://kjs92980.github.io/p/use-make-in-windows/make_2.png"
+width="1401"
+height="279"
+loading="lazy"
+alt="Makefile 위치에서 make 실행"
+class="gallery-image"
+data-flex-grow="502"
+data-flex-basis="1205px"
+>&lt;/p>
+&lt;h2 id="마치며">마치며&lt;/h2>
+&lt;ul>
+&lt;li>Chocolatey를 통해 간단한 명령어로 패키지를 업데이트하거나 다른 패키지를 설치하는데 유용하게 사용할 수 있을 것입니다.&lt;/li>
+&lt;li>Makefile에 자동화 할 동작이 있다면 추가로 정의해봐도 좋을 것 같습니다.&lt;/li>
+&lt;/ul>
+&lt;p>오늘도 좋은 하루 되세요. 감사합니다. 😁&lt;/p></description></item></channel></rss>
