@@ -6,7 +6,6 @@ date: 2023-07-09T15:46:37+09:00
 image: microservice-patterns.png
 categories:
     - Design Patterns
-draft: false
 ---
 
 마이크로서비스 패턴 (크리스 리처드슨 저)의 7장 내용을 다룹니다.

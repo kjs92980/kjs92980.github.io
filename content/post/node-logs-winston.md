@@ -6,7 +6,6 @@ date: 2023-06-18T13:26:26+09:00
 image: /img/node.png
 categories:
     - Node
-draft: false
 ---
 
 ## Why?

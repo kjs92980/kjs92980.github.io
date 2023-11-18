@@ -6,7 +6,6 @@ date: 2023-06-05T15:11:17+09:00
 image: /img/mongodb.png
 categories:
     - MongoDB
-draft: false
 ---
 
 ## Random I/O vs Sequential I/O

@@ -8,7 +8,6 @@ categories:
     - Q&A
 tags:
     - Windows
-draft: false
 ---
 
 이 글에서는 Windows에서 GNU Make를 설치하고 make 명령어를 사용해보겠습니다.
